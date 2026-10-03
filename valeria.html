@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Vali — Asesora de Belleza IA | DermaLuxe</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; }
+  body {
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    background:#04080a; color:#eef7f2;
+    display:flex; flex-direction:column;
+  }
+
+  /* ===== fondo vivo: aurora + grid + partículas ===== */
+  .bg { position:fixed; inset:0; z-index:0; overflow:hidden; }
+  .aurora { position:absolute; inset:-20%;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(16,185,129,.20), transparent 55%),
+      radial-gradient(ellipse 50% 35% at 85% 20%, rgba(56,189,248,.13), transparent 55%),
+      radial-gradient(ellipse 55% 45% at 70% 95%, rgba(212,175,55,.10), transparent 60%),
+      radial-gradient(ellipse 40% 30% at 8% 85%, rgba(52,211,153,.12), transparent 55%);
+    filter:blur(30px);
+    animation:auroraShift 14s ease-in-out infinite alternate;
+  }
+  @keyframes auroraShift { 0%{ transform:translate(0,0) scale(1);} 100%{ transform:translate(3%,-2%) scale(1.08);} }
+  .grid { position:absolute; inset:0; opacity:.5;
+    background-image:
+      linear-gradient(rgba(52,211,153,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(52,211,153,.05) 1px, transparent 1px);
+    background-size:44px 44px;
+    mask-image:radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 75%);
+    -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 75%);
+  }
+  .scanline { position:absolute; left:0; right:0; height:2px; z-index:1;
+    background:linear-gradient(90deg, transparent, rgba(52,211,153,.35), transparent);
+    animation:scanBg 7s linear infinite; opacity:.5; }
+  @keyframes scanBg { 0%{ top:-2%; } 100%{ top:102%; } }
+  .stars { position:absolute; inset:0; }
+  .stars i { position:absolute; width:2px; height:2px; border-radius:50%; background:#6ee7b7;
+    animation:twinkle 4s ease-in-out infinite; }
+  @keyframes twinkle { 0%,100%{ opacity:.1; } 50%{ opacity:.8; } }
+
+  /* ===== top bar ===== */
+  .top { position:relative; z-index:2; display:flex; align-items:center; justify-content:space-between;
+    padding:14px 20px; padding-top:max(14px, env(safe-area-inset-top)); }
+  .brand { display:flex; align-items:center; gap:10px; }
+  .brand-orb { width:38px; height:38px; border-radius:50%;
+    background:conic-gradient(from 180deg, #34d399, #d4af37, #38bdf8, #34d399);
+    animation:spin 8s linear infinite; position:relative; flex-shrink:0; }
+  .brand-orb::after { content:''; position:absolute; inset:3px; border-radius:50%; background:#061210; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .brand b { font-size:17px; font-weight:800; letter-spacing:-.02em; display:block; }
+  .brand span { font-size:10.5px; color:#7fa398; letter-spacing:.14em; text-transform:uppercase; }
+  .live-chip { font-size:11px; font-weight:700; color:#34d399; background:rgba(52,211,153,.1);
+    border:1px solid rgba(52,211,153,.3); padding:6px 12px; border-radius:20px; display:flex; align-items:center; gap:6px; }
+  .live-chip i { width:6px; height:6px; border-radius:50%; background:#34d399; animation:blink 1.6s infinite; }
+  @keyframes blink { 50% { opacity:.25; } }
+
+  /* ===== STAGE central: holograma REACTIVO ===== */
+  .stage { position:relative; z-index:2; flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-start; padding-top:6px; min-height:180px; pointer-events:none; }
+  .holo-wrap { position:relative; width:min(200px, 42vw); aspect-ratio:1; }
+  /* anillos orbitales SVG */
+  .holo-wrap svg.rings { position:absolute; inset:-22%; width:144%; height:144%; }
+  .rings .rr { transform-box:fill-box; transform-origin:center; }
+  .rings .r1 { animation:spin 22s linear infinite; }
+  .rings .r2 { animation:spinRev 16s linear infinite; }
+  .rings .r3 { animation:spin 34s linear infinite; }
+  @keyframes spinRev { to { transform:rotate(-360deg); } }
+  /* halo según modo */
+  .halo { position:absolute; inset:-14%; border-radius:50%; z-index:0;
+    background:radial-gradient(circle, rgba(52,211,153,.28), transparent 65%);
+    animation:haloBreathe 3.4s ease-in-out infinite; }
+  @keyframes haloBreathe { 0%,100%{ transform:scale(1); opacity:.65; } 50%{ transform:scale(1.12); opacity:1; } }
+  .orb-wrap { position:absolute; inset:0; border-radius:50%; cursor:pointer; pointer-events:auto; }
+  .orb { position:absolute; inset:0; border-radius:50%;
+    background:conic-gradient(from 0deg, #34d399, #38bdf8, #d4af37, #34d399);
+    animation:spin 7s linear infinite; }
+  .orb-wrap::after { content:''; position:absolute; inset:5px; border-radius:50%; background:#07110e; z-index:1; }
+  .holo { position:absolute; inset:11px; z-index:2; pointer-events:none; }
+  .holo svg { width:100%; height:100%; display:block; }
+  .holo .glow { animation:holoPulse 3.2s ease-in-out infinite; }
+  @keyframes holoPulse { 0%,100%{ opacity:.88;} 50%{ opacity:1;} }
+  .holo .ring { animation:spin 16s linear infinite; transform-box:fill-box; transform-origin:center; }
+  .holo .scan { animation:scan 3.6s ease-in-out infinite; }
+  @keyframes scan { 0%,100%{ transform:translateY(-17px); opacity:0;} 15%{ opacity:.85;} 50%{ transform:translateY(17px); opacity:.85;} 85%{ opacity:.85;} }
+  .holo .eyes { transform-box:fill-box; transform-origin:center; transition:transform .35s; }
+  .orb-wrap[data-mode="thinking"] .eyes { transform:scaleY(.3); }
+  .orb-wrap[data-mode="speaking"] .lips { animation:lipsTalk .28s alternate infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes lipsTalk { from{ transform:scaleY(1);} to{ transform:scaleY(1.65);} }
+  .holo .particles circle { animation:floaty 4.2s ease-in-out infinite; transform-box:fill-box; }
+  @keyframes floaty { 0%,100%{ transform:translateY(0); opacity:.9;} 50%{ transform:translateY(-6px); opacity:.25;} }
+
+  /* modos del orbe */
+  .orb-wrap.listening .orb { animation:spin 3s linear infinite; box-shadow:0 0 70px rgba(52,211,153,.55); }
+  .orb-wrap.thinking .orb { animation:spin 1.1s linear infinite; filter:blur(1.5px) saturate(1.5); box-shadow:0 0 70px rgba(56,189,248,.5); }
+  .orb-wrap.speaking .orb { animation:spin 2s linear infinite; box-shadow:0 0 80px rgba(212,175,55,.55); }
+  .orb-wrap.idle .orb { animation:spin 9s linear infinite; box-shadow:0 0 40px rgba(52,211,153,.25); }
+  .orb-wrap::before { content:''; position:absolute; inset:-10px; border-radius:50%; z-index:0;
+    border:1px solid rgba(52,211,153,.25); animation:ripple 2.6s ease-out infinite; }
+  .orb-wrap.listening::before { border-color:rgba(52,211,153,.5); }
+  @keyframes ripple { 0%{ transform:scale(.92); opacity:.8; } 100%{ transform:scale(1.28); opacity:0; } }
+
+  /* visualizador de voz circular (canvas) */
+  .viz { position:absolute; inset:-26%; width:152%; height:152%; z-index:0; pointer-events:none; opacity:.85; }
+
+  /* estado */
+  .status { font-size:13px; font-weight:700; color:#9fd4c2; min-height:20px; display:flex; align-items:center; gap:8px;
+    margin-top:10px; padding:7px 16px; border-radius:20px; background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.1); backdrop-filter:blur(10px); pointer-events:none; }
+  .wave { display:flex; gap:4px; align-items:center; height:16px; }
+  .wave i { width:4px; border-radius:2px; background:#34d399; animation:wv 1s ease-in-out infinite; }
+  .wave i:nth-child(1){ height:30%; animation-delay:0s; } .wave i:nth-child(2){ height:70%; animation-delay:.12s; }
+  .wave i:nth-child(3){ height:100%; animation-delay:.24s; } .wave i:nth-child(4){ height:60%; animation-delay:.36s; }
+  .wave i:nth-child(5){ height:35%; animation-delay:.48s; }
+  @keyframes wv { 50% { transform:scaleY(.35); } }
+
+  /* ===== conversación ===== */
+  .chat { position:relative; z-index:2; flex:1.4; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding:6px 18px 8px; display:flex; flex-direction:column; gap:12px; }
+  .msg { max-width:86%; padding:13px 17px; border-radius:20px; font-size:15px; line-height:1.55;
+    animation:rise .4s cubic-bezier(.2,.9,.3,1.2); word-wrap:break-word; }
+  @keyframes rise { from { opacity:0; transform:translateY(14px) scale(.97); } }
+  .msg.user { align-self:flex-end; background:linear-gradient(135deg,#1f5a4a,#155442); border:1px solid rgba(52,211,153,.25);
+    border-bottom-right-radius:6px; }
+  .msg.bot { align-self:flex-start; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09);
+    border-bottom-left-radius:6px; backdrop-filter:blur(12px); }
+  .msg.sys { align-self:center; font-size:12px; color:#8fb0a5; background:none; padding:4px; max-width:100%; }
+
+  /* tarjeta de servicio inline */
+  .card { align-self:stretch; max-width:100%; background:linear-gradient(150deg, rgba(22,40,34,.9), rgba(12,22,18,.9));
+    border:1px solid rgba(52,211,153,.3); border-radius:22px; padding:16px 18px; backdrop-filter:blur(16px);
+    animation:rise .45s cubic-bezier(.2,.9,.3,1.2); box-shadow:0 0 44px rgba(16,185,129,.12), 0 12px 44px rgba(0,0,0,.35); }
+  .card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .card-emoji { font-size:30px; }
+  .card h4 { font-size:16.5px; font-weight:800; }
+  .card .tags { display:flex; gap:7px; flex-wrap:wrap; margin:10px 0 12px; }
+  .card .tag { font-size:11.5px; font-weight:700; padding:5px 12px; border-radius:14px;
+    background:rgba(52,211,153,.1); color:#6ee7b7; border:1px solid rgba(52,211,153,.2); }
+  .card .tag.gold { background:rgba(212,175,55,.1); color:#e8d48a; border-color:rgba(212,175,55,.25); }
+  .card .tag.price { background:rgba(255,255,255,.07); color:#fff; font-weight:900; font-size:13px; }
+  .card-row { display:flex; gap:10px; }
+  .card-btn { flex:1; border:none; border-radius:14px; padding:12px; font-size:14px; font-weight:800; cursor:pointer; }
+  .card-btn.primary { background:linear-gradient(135deg,#34d399,#0d9488); color:#04110c; }
+  .card-btn.ghost { background:rgba(255,255,255,.06); color:#cfe8dd; border:1px solid rgba(255,255,255,.12); }
+  .card-btn:active { transform:scale(.97); }
+
+  /* ===== dock inferior ===== */
+  .dock { position:relative; z-index:2; padding:8px 16px calc(14px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; align-items:center; gap:9px;
+    background:linear-gradient(180deg, transparent, rgba(4,8,10,.9) 35%); }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; padding:0 8px 2px; }
+  .chip { font-size:12.5px; font-weight:700; color:#c9e8dc; background:rgba(52,211,153,.09);
+    border:1px solid rgba(52,211,153,.3); border-radius:20px; padding:8px 15px; cursor:pointer;
+    animation:rise .4s backwards; }
+  .chip:active { transform:scale(.94); background:rgba(52,211,153,.22); }
+  .chip:nth-child(1){ animation-delay:.05s; } .chip:nth-child(2){ animation-delay:.12s; }
+  .chip:nth-child(3){ animation-delay:.19s; } .chip:nth-child(4){ animation-delay:.26s; }
+  .dock input { width:100%; max-width:520px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
+    border-radius:16px; padding:13px 16px; color:#eef7f2; font-size:16px; outline:none; backdrop-filter:blur(10px); }
+  .dock input:focus { border-color:rgba(52,211,153,.55); box-shadow:0 0 24px rgba(52,211,153,.15); }
+  .dock input::placeholder { color:#6b8a80; }
+
+  /* ===== FABs laterales ===== */
+  .fabs { position:fixed; right:14px; top:46%; transform:translateY(-50%); z-index:6;
+    display:flex; flex-direction:column; gap:12px; }
+  .fab { width:52px; height:52px; border-radius:18px; border:1px solid rgba(52,211,153,.35); cursor:pointer;
+    background:rgba(10,20,16,.74); backdrop-filter:blur(14px); display:grid; place-items:center; font-size:22px;
+    position:relative; transition:transform .15s, box-shadow .25s; box-shadow:0 8px 30px rgba(0,0,0,.45); }
+  .fab:active { transform:scale(.88); }
+  .fab .bdg { position:absolute; top:-6px; right:-6px; min-width:20px; height:20px; border-radius:10px;
+    background:linear-gradient(135deg,#34d399,#d4af37); color:#04110c; font-size:11px; font-weight:900;
+    display:none; align-items:center; justify-content:center; padding:0 5px; }
+
+  /* ===== drawers laterales ===== */
+  .backdrop { position:fixed; inset:0; z-index:7; background:rgba(3,7,6,.62); backdrop-filter:blur(4px);
+    opacity:0; visibility:hidden; transition:.3s; }
+  .backdrop.show { opacity:1; visibility:visible; }
+  .drawer { position:fixed; top:0; right:0; bottom:0; z-index:8; width:min(400px,100%);
+    background:linear-gradient(180deg, rgba(10,18,15,.97), rgba(6,10,9,.99));
+    border-left:1px solid rgba(52,211,153,.22); transform:translateX(105%);
+    transition:transform .38s cubic-bezier(.2,.9,.3,1); display:flex; flex-direction:column;
+    box-shadow:-20px 0 60px rgba(0,0,0,.5); }
+  .drawer.open { transform:none; }
+  .dr-head { display:flex; align-items:center; gap:10px; padding:18px 20px 12px;
+    border-bottom:1px solid rgba(255,255,255,.06); }
+  .dr-head b { font-size:17px; letter-spacing:-.02em; }
+  .dr-head .x { margin-left:auto; background:none; border:none; color:#7fa398; font-size:22px; cursor:pointer; padding:4px; }
+  .dr-body { flex:1; overflow-y:auto; padding:16px 20px; -webkit-overflow-scrolling:touch; }
+
+  /* carrito */
+  .cart-item { display:flex; align-items:center; gap:12px; background:rgba(255,255,255,.04);
+    border:1px solid rgba(52,211,153,.16); border-radius:16px; padding:12px 14px; margin-bottom:10px;
+    animation:rise .3s; }
+  .ci-ico { font-size:26px; flex-shrink:0; }
+  .ci-mid { flex:1; min-width:0; }
+  .ci-mid b { display:block; font-size:14px; }
+  .ci-mid span { font-size:12px; color:#8fb0a5; }
+  .ci-qty { display:flex; align-items:center; gap:8px; }
+  .qb { width:28px; height:28px; border-radius:9px; border:1px solid rgba(52,211,153,.3);
+    background:rgba(52,211,153,.1); color:#6ee7b7; font-size:16px; font-weight:900; cursor:pointer; }
+  .qb:active { transform:scale(.88); }
+  .cart-empty { text-align:center; color:#8fb0a5; font-size:14px; padding:30px 10px; line-height:1.7; }
+  .cart-foot { border-top:1px solid rgba(212,175,55,.25); margin-top:6px; padding-top:14px; }
+  .cart-total { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .cart-total span { font-size:13px; color:#9fc4b7; font-weight:700; }
+  .cart-total b { font-size:22px; color:#d4af37; font-weight:900; }
+  .big-btn { width:100%; border:none; border-radius:16px; padding:15px; font-size:15px; font-weight:900;
+    background:linear-gradient(135deg,#34d399,#0d9488); color:#04110c; cursor:pointer; }
+  .big-btn:disabled { opacity:.35; }
+  .big-btn:active { transform:scale(.97); }
+
+  /* agenda */
+  .cal-days { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
+  .cal-day { border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); border-radius:14px;
+    padding:10px 4px; color:#cfe8dd; cursor:pointer; text-align:center; }
+  .cal-day b { display:block; font-size:13px; }
+  .cal-day span { font-size:11px; color:#8fb0a5; }
+  .cal-day.on { border-color:rgba(52,211,153,.6); background:rgba(52,211,153,.14); color:#a7f3d0; }
+  .cal-slots { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+  .slot { border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); border-radius:12px;
+    padding:11px 6px; color:#cfe8dd; font-size:13px; font-weight:700; cursor:pointer; }
+  .slot.busy { opacity:.32; text-decoration:line-through; cursor:default; }
+  .slot.on { border-color:rgba(212,175,55,.7); background:rgba(212,175,55,.15); color:#e8d48a; }
+  .ok-box { margin-top:14px; padding:14px 16px; border-radius:16px; font-size:14px; line-height:1.6;
+    background:rgba(52,211,153,.12); border:1px solid rgba(52,211,153,.4); color:#a7f3d0; animation:rise .4s; }
+  .mini-btn { margin-top:10px; border:1px solid rgba(212,175,55,.5); background:rgba(212,175,55,.12); color:#e8d48a;
+    border-radius:12px; padding:9px 14px; font-size:12.5px; font-weight:800; cursor:pointer; }
+  .mini-btn:active { transform:scale(.95); }
+
+  /* bitácora */
+  .log-item { display:flex; gap:10px; align-items:flex-start; padding:11px 4px;
+    border-bottom:1px solid rgba(255,255,255,.05); animation:rise .3s; }
+  .log-ico { font-size:18px; flex-shrink:0; margin-top:1px; }
+  .log-txt { flex:1; min-width:0; }
+  .log-txt b { display:block; font-size:13.5px; }
+  .log-txt span { font-size:12px; color:#8fb0a5; display:block; }
+  .log-t { font-size:10.5px; color:#5f7a70; flex-shrink:0; margin-top:3px; }
+
+  /* ===== pantalla de inicio ===== */
+  .start { position:fixed; inset:0; z-index:10; background:linear-gradient(180deg,#07110e,#04080a);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; padding:30px;
+    text-align:center; transition:opacity .6s, visibility .6s; }
+  .start.hide { opacity:0; visibility:hidden; pointer-events:none; }
+  .start .big-orb { width:170px; height:170px; border-radius:50%; position:relative;
+    animation:breathe 3s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform:scale(1.05); } }
+  .start .big-orb .halo { inset:-18%; }
+  .start h1 { font-size:34px; font-weight:900; letter-spacing:-.03em; }
+  .start h1 b { background:linear-gradient(90deg,#34d399,#38bdf8,#d4af37); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .start p { font-size:15.5px; color:#9fc4b7; max-width:420px; line-height:1.6; }
+  .start-btn { background:linear-gradient(135deg,#34d399,#0d9488); color:#04110c; border:none;
+    font-size:17px; font-weight:900; padding:17px 46px; border-radius:30px; cursor:pointer;
+    box-shadow:0 14px 50px rgba(16,185,129,.45), 0 0 90px rgba(52,211,153,.25); display:flex; align-items:center; gap:10px; }
+  .start-btn:active { transform:scale(.96); }
+  .start small { color:#5f7a70; font-size:12px; }
+
+  @media (max-width:640px){
+    .fabs { right:10px; gap:10px; }
+    .fab { width:44px; height:44px; font-size:18px; border-radius:14px; }
+    .holo-wrap { width:min(160px, 44vw); }
+    .chat { padding:4px 14px 6px; }
+    .drawer { width:100%; }
+    .stage { min-height:150px; }
+  }
+  @media (max-height:700px){
+    .holo-wrap { width:min(150px, 38vw); }
+    .stage { min-height:130px; }
+  }
+</style>
+</head>
+<body>
+<div class="bg" id="bg">
+  <div class="aurora"></div>
+  <div class="grid"></div>
+  <div class="scanline"></div>
+  <div class="stars" id="stars"></div>
+</div>
+
+<!-- pantalla de inicio -->
+<div class="start" id="start">
+  <div class="big-orb">
+    <div class="halo"></div>
+    <div class="orb"></div>
+    <div class="holo" id="holoStart"></div>
+  </div>
+  <h1>Hola, soy <b>Vali</b></h1>
+  <p>Tu asesora de belleza IA de DermaLuxe. Solo <b>habla</b> — te escucho y contesto sola. Procesos, cuidados, precios y tu cita, de una.</p>
+  <button class="start-btn" id="startBtn">✦ Empezar a conversar</button>
+  <small>Se activa tu micrófono · conversación fluida, sin botones</small>
+</div>
+
+<!-- top -->
+<div class="top">
+  <div class="brand">
+    <div class="brand-orb"></div>
+    <div><b>Vali</b><span>DermaLuxe · IA</span></div>
+  </div>
+  <div class="live-chip"><i></i> EN VIVO</div>
+</div>
+
+<!-- STAGE: holograma reactivo + visualizador -->
+<div class="stage" id="stage">
+  <div class="holo-wrap">
+    <div class="halo"></div>
+    <canvas class="viz" id="viz"></canvas>
+    <svg class="rings" viewBox="0 0 100 100">
+      <circle class="rr r1" cx="50" cy="50" r="47" fill="none" stroke="rgba(52,211,153,.18)" stroke-width=".6" stroke-dasharray="2 5"/>
+      <circle class="rr r2" cx="50" cy="50" r="42" fill="none" stroke="rgba(56,189,248,.14)" stroke-width=".5" stroke-dasharray="14 10"/>
+      <circle class="rr r3" cx="50" cy="50" r="51" fill="none" stroke="rgba(212,175,55,.10)" stroke-width=".4" stroke-dasharray="1 9"/>
+    </svg>
+    <div class="orb-wrap idle" id="orbWrap" data-mode="idle">
+      <div class="orb"></div>
+      <div class="holo" id="holoDock"></div>
+    </div>
+  </div>
+  <div class="status" id="status">Toca ✦ para activar tu micrófono</div>
+</div>
+
+<!-- conversación -->
+<div class="chat" id="chat"></div>
+
+<!-- dock -->
+<div class="dock" id="dock">
+  <div class="chips" id="chips">
+    <div class="chip" onclick="quickAsk('¿qué tratamientos tienen?')">✨ Tratamientos</div>
+    <div class="chip" onclick="quickAsk('quiero saber los precios')">💰 Precios</div>
+    <div class="chip" onclick="quickAsk('hay disponibilidad para hoy?')">📅 Disponibilidad</div>
+    <div class="chip" onclick="quickAsk('recomiéndame algo para primera vez')">🥇 Primera vez</div>
+  </div>
+  <input type="text" id="textInput" placeholder="…o escríbeme aquí" autocomplete="off">
+</div>
+
+<!-- FABs laterales -->
+<div class="fabs">
+  <div class="fab" id="fabCart" title="Carrito">🛍<span class="bdg" id="cartBadge">0</span></div>
+  <div class="fab" id="fabAgenda" title="Agenda">📅</div>
+  <div class="fab" id="fabLog" title="Bitácora">🗒</div>
+</div>
+
+<!-- backdrop + drawers -->
+<div class="backdrop" id="backdrop"></div>
+
+<div class="drawer" id="drCart">
+  <div class="dr-head">🛍 <b>Tu carrito</b><button class="x" data-close>×</button></div>
+  <div class="dr-body" id="cartBody"></div>
+</div>
+
+<div class="drawer" id="drAgenda">
+  <div class="dr-head">📅 <b>Agenda tu cita</b><button class="x" data-close>×</button></div>
+  <div class="dr-body" id="agendaBody"></div>
+</div>
+
+<div class="drawer" id="drLog">
+  <div class="dr-head">🗒 <b>Bitácora de hoy</b><button class="x" data-close>×</button></div>
+  <div class="dr-body" id="logBody"></div>
+</div>
+
+<script>
+/* ================== ESTADO ================== */
+const chat = document.getElementById('chat');
+const statusEl = document.getElementById('status');
+const orbWrap = document.getElementById('orbWrap');
+const textInput = document.getElementById('textInput');
+const vizCv = document.getElementById('viz');
+let speakOn = true, busy = false, session = false;
+let stream = null, mediaRecorder = null, chunks = [], recording = false;
+let audioCtx = null, analyser = null, silenceAt = 0, startedAt = 0;
+let fillerAudio = null, responseAudio = null;
+let CART = {}, BOOKED = [];
+let listenFails = 0, micBlocked = false;
+
+const PRODUCTS = [
+  {id:1, nombre:'Limpieza Facial Profunda', precio:180000, dur:'50 min', res:'Inmediato', emoji:'✨'},
+  {id:2, nombre:'Botox Zona Frontal', precio:950000, dur:'30 min', res:'Día 3-14', emoji:'💉'},
+  {id:3, nombre:'Relleno Labios', precio:850000, dur:'45 min', res:'5-7 días', emoji:'💋'},
+  {id:4, nombre:'Láser Depilatorio Full', precio:2400000, dur:'90 min', res:'-90% vello', emoji:'🔦'},
+  {id:5, nombre:'Peeling Químico', precio:320000, dur:'40 min', res:'1 semana', emoji:'🧪'},
+  {id:6, nombre:'Microdermoabrasión', precio:220000, dur:'35 min', res:'Inmediato', emoji:'💎'},
+];
+function fmt(n){ return '$' + n.toLocaleString('es-CO'); }
+function findProduct(nombre){
+  return PRODUCTS.find(x=>x.nombre.toLowerCase().includes(String(nombre||'').toLowerCase().split(' ')[0]));
+}
+
+/* estrellas del fondo */
+(function(){
+  const s = document.getElementById('stars');
+  let html = '';
+  for(let i=0;i<26;i++){
+    html += `<i style="left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*4}s"></i>`;
+  }
+  s.innerHTML = html;
+})();
+
+/* ================== HOLOGRAMA DE MUJER ================== */
+const HOLO_SVG = `
+<svg viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="hg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#d4af37"/>
+    </linearGradient>
+    <linearGradient id="sg1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="rgba(52,211,153,0)"/>
+      <stop offset=".5" stop-color="rgba(110,231,183,.85)"/>
+      <stop offset="1" stop-color="rgba(212,175,55,0)"/>
+    </linearGradient>
+    <clipPath id="oc1"><circle cx="50" cy="50" r="37"/></clipPath>
+  </defs>
+  <g clip-path="url(#oc1)">
+    <circle class="ring" cx="50" cy="50" r="34" fill="none" stroke="rgba(110,231,183,.22)" stroke-dasharray="3 7"/>
+    <g class="glow">
+      <path d="M50 14 C36 14 28 24 27 38 C26 50 29 58 28 70 C34 66 36 62 37 56 C33 50 32 42 36 34 C40 26 46 24 50 24 C54 24 60 26 64 34 C68 42 67 50 63 56 C64 62 66 66 72 70 C71 58 74 50 73 38 C72 24 64 14 50 14 Z"
+            fill="rgba(52,211,153,.10)" stroke="url(#hg1)" stroke-width="1.3"/>
+      <ellipse cx="50" cy="44" rx="12.5" ry="15.5" fill="rgba(52,211,153,.05)" stroke="#6ee7b7" stroke-width="1.1" opacity=".92"/>
+      <path d="M41 39 Q44.5 37.4 48 39" stroke="rgba(110,231,183,.7)" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <path d="M52 39 Q55.5 37.4 59 39" stroke="rgba(110,231,183,.7)" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <g class="eyes">
+        <path d="M42.5 42.6 Q45.5 44.6 48.5 42.6" stroke="#34d399" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M51.5 42.6 Q54.5 44.6 57.5 42.6" stroke="#34d399" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </g>
+      <path d="M50 45 L48.8 49.5 L50.6 50" stroke="rgba(110,231,183,.55)" stroke-width=".9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path class="lips" d="M46.5 54 Q50 56.6 53.5 54" stroke="#d4af37" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <path d="M45 59 C45 63 44.5 65 43 67" stroke="rgba(110,231,183,.6)" stroke-width="1" fill="none"/>
+      <path d="M55 59 C55 63 55.5 65 57 67" stroke="rgba(110,231,183,.6)" stroke-width="1" fill="none"/>
+      <path d="M30 80 C35 68 42 63 50 63 C58 63 65 68 70 80" stroke="url(#hg1)" stroke-width="1.3" fill="rgba(52,211,153,.05)"/>
+      <circle cx="50" cy="66.5" r="1.1" fill="#d4af37"/>
+    </g>
+    <rect class="scan" x="14" y="49" width="72" height="2.4" rx="1.2" fill="url(#sg1)" opacity=".55"/>
+    <g class="particles" fill="#6ee7b7">
+      <circle cx="27" cy="30" r=".9" style="animation-delay:0s"/>
+      <circle cx="73" cy="36" r=".8" style="animation-delay:1.1s"/>
+      <circle cx="31" cy="66" r=".7" style="animation-delay:2.2s"/>
+      <circle cx="71" cy="62" r=".9" style="animation-delay:.6s"/>
+      <circle cx="63" cy="21" r=".6" style="animation-delay:1.7s"/>
+      <circle cx="39" cy="76" r=".8" style="animation-delay:2.8s"/>
+    </g>
+  </g>
+</svg>`;
+document.getElementById('holoDock').innerHTML = HOLO_SVG;
+document.getElementById('holoStart').innerHTML = HOLO_SVG;
+
+/* ================== VISUALIZADOR CIRCULAR DE VOZ ================== */
+const vizCtx = vizCv.getContext('2d');
+let vizLevels = new Array(64).fill(0);
+let vizAnim = null, targetLevel = 0, curLevel = 0;
+
+function vizLoop(){
+  const w = vizCv.width = vizCv.clientWidth * (window.devicePixelRatio||1);
+  const h = vizCv.height = vizCv.clientHeight * (window.devicePixelRatio||1);
+  vizCtx.clearRect(0,0,w,h);
+  const cx = w/2, cy = h/2;
+  const baseR = Math.min(w,h) * 0.30;
+  // nivel global suavizado
+  curLevel += (targetLevel - curLevel) * 0.18;
+  if(recording && analyser){
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(buf);
+    const now = buf.reduce((a,b)=>a+b,0)/buf.length;
+    targetLevel = Math.min(1, now/38);
+  } else { targetLevel *= 0.94; }
+  for(let i=0;i<vizLevels.length;i++){
+    const jitter = targetLevel>0.05 ? (Math.random()*0.5+0.5) : 0.06;
+    vizLevels[i] += ((curLevel*jitter) - vizLevels[i]) * 0.25;
+  }
+  const mode = orbWrap.dataset.mode;
+  const col = mode==='thinking' ? '56,189,248' : mode==='speaking' ? '212,175,55' : '52,211,153';
+  // barras radiales
+  for(let i=0;i<vizLevels.length;i++){
+    const ang = (i/vizLevels.length)*Math.PI*2 - Math.PI/2;
+    const len = baseR*0.14 + vizLevels[i]*baseR*0.55;
+    const x0 = cx + Math.cos(ang)*baseR, y0 = cy + Math.sin(ang)*baseR;
+    const x1 = cx + Math.cos(ang)*(baseR+len), y1 = cy + Math.sin(ang)*(baseR+len);
+    vizCtx.strokeStyle = `rgba(${col},${0.25+vizLevels[i]*0.6})`;
+    vizCtx.lineWidth = Math.max(1.5, (w/240));
+    vizCtx.lineCap = 'round';
+    vizCtx.beginPath(); vizCtx.moveTo(x0,y0); vizCtx.lineTo(x1,y1); vizCtx.stroke();
+  }
+  // anillo base
+  vizCtx.strokeStyle = `rgba(${col},.22)`;
+  vizCtx.lineWidth = 1;
+  vizCtx.beginPath(); vizCtx.arc(cx,cy,baseR,0,Math.PI*2); vizCtx.stroke();
+  vizAnim = requestAnimationFrame(vizLoop);
+}
+vizLoop();
+
+/* ================== BITÁCORA ================== */
+const LOG = [];
+function logEvent(ico, titulo, det){
+  const t = new Date();
+  const hh = t.getHours()%12||12, mm = String(t.getMinutes()).padStart(2,'0');
+  LOG.unshift({ico, titulo, det, t: `${hh}:${mm} ${t.getHours()<12?'a.m.':'p.m.'}`});
+  if(LOG.length > 80) LOG.pop();
+  const body = document.getElementById('logBody');
+  if(body) body.innerHTML = LOG.map(l=>`
+    <div class="log-item">
+      <div class="log-ico">${l.ico}</div>
+      <div class="log-txt"><b>${l.titulo}</b><span>${l.det}</span></div>
+      <div class="log-t">${l.t}</div>
+    </div>`).join('');
+}
+logEvent('✦','Sesión iniciada','Holograma de Vali activo — lista para conversar');
+
+/* ================== DRAWERS ================== */
+const backdrop = document.getElementById('backdrop');
+const drawers = {cart: document.getElementById('drCart'), agenda: document.getElementById('drAgenda'), log: document.getElementById('drLog')};
+let openDr = null;
+function openDrawer(k){
+  if(openDr) drawers[openDr].classList.remove('open');
+  openDr = k;
+  drawers[k].classList.add('open');
+  backdrop.classList.add('show');
+  if(k==='cart') renderCart();
+  if(k==='agenda') renderAgenda();
+}
+function closeDrawers(){
+  Object.values(drawers).forEach(d=>d.classList.remove('open'));
+  backdrop.classList.remove('show');
+  openDr = null;
+}
+backdrop.onclick = closeDrawers;
+document.querySelectorAll('[data-close]').forEach(b=> b.onclick = closeDrawers);
+document.getElementById('fabCart').onclick = ()=> openDrawer('cart');
+document.getElementById('fabAgenda').onclick = ()=> openDrawer('agenda');
+document.getElementById('fabLog').onclick = ()=> openDrawer('log');
+
+/* ================== CARRITO ================== */
+function cartTotal(){ return Object.entries(CART).reduce((s,[id,q])=>s+PRODUCTS.find(p=>p.id==id).precio*q,0); }
+function cartCount(){ return Object.values(CART).reduce((a,b)=>a+b,0); }
+function updateBadge(){
+  const b = document.getElementById('cartBadge');
+  const n = cartCount();
+  b.textContent = n;
+  b.style.display = n ? 'flex' : 'none';
+}
+function renderCart(){
+  const body = document.getElementById('cartBody');
+  const n = cartCount();
+  if(!n){
+    body.innerHTML = `<div class="cart-empty">Tu carrito está vacío 🌱<br><i>Pídele a Vali:</i> «muéstrame los tratamientos»</div>`;
+    return;
+  }
+  const items = Object.entries(CART).map(([id,q])=>{
+    const p = PRODUCTS.find(x=>x.id==id);
+    return `<div class="cart-item">
+      <div class="ci-ico">${p.emoji}</div>
+      <div class="ci-mid"><b>${p.nombre}</b><span>${fmt(p.precio)} c/u</span></div>
+      <div class="ci-qty"><button class="qb" onclick="cartQty(${id},-1)">−</button><b>${q}</b><button class="qb" onclick="cartQty(${id},1)">+</button></div>
+    </div>`;
+  }).join('');
+  body.innerHTML = items + `
+    <div class="cart-foot">
+      <div class="cart-total"><span>Total</span><b>${fmt(cartTotal())}</b></div>
+      <button class="big-btn" onclick="checkoutDrawer()">Pagar ${fmt(cartTotal())} · Confirmar</button>
+    </div>`;
+}
+function cartQty(id, d){
+  CART[id] = (CART[id]||0) + d;
+  if(CART[id] <= 0) delete CART[id];
+  updateBadge();
+  renderCart();
+  logEvent('🛍','Carrito actualizado', cartCount() + ' servicio' + (cartCount()==1?'':'s') + ' · ' + fmt(cartTotal()));
+}
+function checkoutDrawer(){
+  addInvoiceCard();
+  logEvent('💳','Pago confirmado','Total ' + fmt(cartTotal()) + ' · factura enviada por WhatsApp');
+  closeDrawers();
+}
+
+/* ================== AGENDA ================== */
+const DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const SLOTS = ['9:00','10:00','11:00','2:00','3:00','4:00','5:00'];
+const BUSY = {'1':['10:00','3:00'], '3':['9:00']};
+let selDia = null, selHora = null;
+function nextDays(n){
+  const out = [];
+  for(let i=0;i<n;i++){ const d = new Date(); d.setDate(d.getDate()+i); out.push(d); }
+  return out;
+}
+function renderAgenda(){
+  const body = document.getElementById('agendaBody');
+  const dias = nextDays(8).map((d,i)=>{
+    const on = selDia===i ? ' on' : '';
+    return `<div class="cal-day${on}" onclick="selDay(${i})"><b>${DIAS[d.getDay()]}</b><span>${d.getDate()} ${MESES[d.getMonth()]}</span></div>`;
+  }).join('');
+  let slots = '<div class="cal-slots">' + SLOTS.map(h=>{
+    const busy = selDia!=null && (BUSY[String(selDia)]||[]).includes(h);
+    const on = selHora===h ? ' on' : '';
+    return `<div class="slot${busy?' busy':''}${on}" ${busy?'':`onclick="selSlot('${h}')"`}>${busy?'✕ ':''}${h}</div>`;
+  }).join('') + '</div>';
+  let ok = '';
+  if(selDia!=null && selHora){
+    const d = nextDays(8)[selDia];
+    ok = `<div class="ok-box">✓ Fecha elegida: <b>${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]} · ${selHora}</b>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <input id="waNombre" placeholder="Tu nombre" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:9px 11px;color:#eef7f2;font-size:13px;outline:none">
+        <input id="waTel" placeholder="Celular WhatsApp" inputmode="tel" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:9px 11px;color:#eef7f2;font-size:13px;outline:none">
+      </div>
+      <button class="mini-btn" onclick="confirmarCita()">✅ Confirmar cita (te llega WhatsApp)</button>
+      <button class="mini-btn" onclick="downloadICS()">📥 Solo añadir a mi calendario (.ics)</button>
+      <div id="citaMsg" style="font-size:12px;margin-top:6px;color:#9fc4b7"></div></div>`;
+  }
+  body.innerHTML = `<div class="cal-days">${dias}</div>${slots}${ok}`;
+}
+let WA_SENT = false;
+async function confirmarCita(){
+  if(selDia==null || !selHora){ return; }
+  const nombre = (document.getElementById('waNombre')?.value || '').trim() || 'Visitante';
+  const tel = (document.getElementById('waTel')?.value || '').replace(/\D/g,'');
+  const msgEl = document.getElementById('citaMsg');
+  if(tel.length < 8){ msgEl.textContent = '✍ Escribe tu celular con indicativo (ej: 573001234567)'; return; }
+  msgEl.textContent = 'Agendando…';
+  const d = nextDays(8)[selDia];
+  const fecha = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  try{
+    const r = await fetch('/api/bookings', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({fecha, hora: selHora, nombre, telefono: tel, servicios: resumenCarrito()})});
+    const j = await r.json();
+    if(j.ok){
+      WA_SENT = !!j.whatsapp;
+      msgEl.innerHTML = j.whatsapp
+        ? '✅ <b>Cita confirmada.</b> Te llega el WhatsApp ahora mismo ☕'
+        : '✅ <b>Cita confirmada.</b> (la línea está ocupada — te contactan al abrir)';
+      logEvent('📅','Cita CONFIRMADA', `${nombre} · ${DIAS[d.getDay()]} ${d.getDate()} · ${selHora} · WhatsApp ${j.whatsapp?'enviado':'pendiente'}`);
+      addBookingCard(selHora + ' — ' + DIAS[d.getDay()]);
+    } else { msgEl.textContent = 'Uy, no pude agendar. ¿Intentas de nuevo?'; }
+  }catch(e){ msgEl.textContent = 'Uy, falló la conexión. ¿Intentas de nuevo?'; }
+}
+function resumenCarrito(){
+  if(!cartCount()) return '';
+  return Object.entries(CART).map(([id,q])=>q+'x '+PRODUCTS.find(p=>p.id==id).nombre).join(', ');
+}
+function selDay(i){ selDia = i; selHora = null; renderAgenda(); }
+function selSlot(h){ selHora = h; renderAgenda();
+  const d = nextDays(8)[selDia];
+  logEvent('📅','Fecha elegida', `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} · ${h} · sede El Poblado`);
+}
+function downloadICS(){
+  if(selDia==null || !selHora) return;
+  const d = nextDays(8)[selDia];
+  const [h,m] = selHora.includes(':') ? selHora.split(':').map(Number) : [Number(selHora),0];
+  const hh = h < 8 ? h + 12 : h;
+  const pad = x => String(x).padStart(2,'0');
+  const f = x => `${x.getFullYear()}${pad(x.getMonth()+1)}${pad(x.getDate())}T${pad(x.getHours())}${pad(x.getMinutes())}00`;
+  const ini = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, m||0);
+  const fin = new Date(ini.getTime() + 45*60000);
+  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//DermaLuxe//Vali//ES','BEGIN:VEVENT',
+    'UID:' + Date.now() + '@dermaluxe', 'DTSTAMP:' + f(new Date()), 'DTSTART:' + f(ini), 'DTEND:' + f(fin),
+    'SUMMARY:DermaLuxe — Cita de valoración', 'LOCATION:DermaLuxe El Poblado, Medellín',
+    'DESCRIPTION:Cita agendada con Vali (IA). Llega 10 min antes.',
+    'BEGIN:VALARM','TRIGGER:-PT60M','ACTION:DISPLAY','DESCRIPTION:Tu cita en DermaLuxe es en 1 hora','END:VALARM',
+    'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([ics], {type:'text/calendar'}));
+  a.download = 'cita-dermaluxe.ics';
+  a.click();
+  logEvent('📥','Calendario','Archivo .ics descargado — recordatorio 1h antes');
+}
+
+/* ================== UI helpers ================== */
+function addMsg(text, cls){
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.textContent = text;
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+  return d;
+}
+function addCard(p, note){
+  const c = document.createElement('div');
+  c.className = 'card';
+  c.innerHTML = `
+    <div class="card-head">
+      <div><h4>${p.nombre}</h4></div>
+      <div class="card-emoji">${p.emoji}</div>
+    </div>
+    <div class="tags">
+      <span class="tag price">${fmt(p.precio)}</span>
+      <span class="tag">⏱ ${p.dur}</span>
+      <span class="tag gold">✦ ${p.res}</span>
+    </div>
+    ${note ? `<div style="font-size:12.5px;color:#8fb0a5;margin:-4px 0 12px">${note}</div>` : ''}
+    <div class="card-row">
+      <button class="card-btn primary">+ Agregar</button>
+      <button class="card-btn ghost">Agendar</button>
+    </div>`;
+  const [addBtn, agBtn] = c.querySelectorAll('.card-btn');
+  addBtn.onclick = ()=>{ addToCart(p, 1, c); };
+  agBtn.onclick = ()=>{ ask('agéndame una cita'); c.remove(); };
+  chat.appendChild(c);
+  chat.scrollTop = chat.scrollHeight;
+  return c;
+}
+function addToCart(p, q, fromCard){
+  CART[p.id] = (CART[p.id]||0) + q;
+  updateBadge();
+  logEvent('🛍','Agregado al carrito', p.nombre + ' · ' + fmt(p.precio));
+  if(fromCard){
+    fromCard.querySelector('.card-row').innerHTML =
+      `<div style="width:100%;text-align:center;font-weight:800;color:#34d399;padding:6px">✓ Agregado al carrito — ${fmt(p.precio*q)}</div>`;
+    setTimeout(()=>fromCard.remove(), 2600);
+  }
+}
+function addBookingCard(hora){
+  const c = document.createElement('div');
+  c.className = 'card';
+  c.innerHTML = `
+    <div class="card-head"><div><h4>Cita agendada ✓</h4></div><div class="card-emoji">📅</div></div>
+    <div class="tags"><span class="tag gold">Hoy · ${hora}</span><span class="tag">Valoración incluida</span></div>
+    <div style="font-size:13px;color:#9fc4b7">Te llega la confirmación por WhatsApp con la dirección. ¡Te espero con un cafecito!</div>`;
+  chat.appendChild(c);
+  chat.scrollTop = chat.scrollHeight;
+}
+function addInvoiceCard(){
+  const items = Object.values(CART).reduce((a,b)=>a+b,0);
+  if(!items){ addMsg('Tu carrito está vacío — ¿agrego algo primero?', 'bot'); return; }
+  const total = Object.entries(CART).reduce((s,[id,q])=>s+PRODUCTS.find(p=>p.id==id).precio*q,0);
+  const det = Object.entries(CART).map(([id,q])=>
+    `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13.5px">
+       <span>${q}× ${PRODUCTS.find(p=>p.id==id).nombre}</span><b>${fmt(PRODUCTS.find(p=>p.id==id).precio*q)}</b></div>`).join('');
+  const c = document.createElement('div');
+  c.className = 'card';
+  c.innerHTML = `
+    <div class="card-head"><div><h4>Tu factura 🧾</h4></div><div class="card-emoji">💳</div></div>
+    ${det}
+    <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(212,175,55,.4);margin-top:8px;padding-top:8px">
+      <b>Total</b><b style="color:#d4af37">${fmt(total)}</b></div>
+    <div class="card-row" style="margin-top:12px">
+      <button class="card-btn primary">Confirmar pago</button>
+      <button class="card-btn ghost">Seguir viendo</button>
+    </div>`;
+  const [pay, more] = c.querySelectorAll('.card-btn');
+  pay.onclick = ()=>{ pay.textContent='✓ Pagado'; pay.style.opacity=.55; more.remove();
+    speak('Listo, pago confirmado. Te envío la factura y la confirmación de tu cita por WhatsApp.'); };
+  more.onclick = ()=> c.remove();
+  chat.appendChild(c);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+/* ================== ACCIONES ================== */
+function doAction(name, args){
+  const p = args && args.producto ? findProduct(args.producto) : null;
+  if(name==='show_card' || name==='highlight_product'){
+    if(p) addCard(p);
+    return null;
+  }
+  if(name==='add_to_cart'){
+    if(p){ addToCart(p, args.cantidad||1); addCard(p); return {msg:`Listo, ya te quedó ${p.nombre} en el carrito. ¿Te cuento el proceso o agendamos tu cita?`}; }
+  }
+  if(name==='book_slot'){
+    const hora = args && args.hora ? args.hora : '3:30 PM';
+    addBookingCard(hora);
+    logEvent('📅','Cita agendada por voz', 'Hoy · ' + hora + ' · valoración incluida');
+    return {msg:`¡Perfecto! Cita agendada para las ${hora}. Te llega la confirmación con la dirección. ¿Necesitas algo más?`};
+  }
+  if(name==='cart_summary'){
+    const items = Object.values(CART).reduce((a,b)=>a+b,0);
+    if(!items) return {msg:'Todavía no llevas nada en el carrito. ¿Te muestro los favoritos de la casa?'};
+    const total = Object.entries(CART).reduce((s,[id,q])=>s+PRODUCTS.find(p=>p.id==id).precio*q,0);
+    const det = Object.entries(CART).map(([id,q])=>`${q} ${PRODUCTS.find(x=>x.id==id).nombre}`).join(', ');
+    return {msg:`Llevas ${items}: ${det}. Total ${fmt(total)} pesos. ¿Confirmamos o agregas algo más?`};
+  }
+  if(name==='clear_cart'){
+    CART = {}; updateBadge(); return {msg:'Listo, carrito vacío. Empezamos de cero — ¿qué te llama la atención?'};
+  }
+  if(name==='checkout'){
+    addInvoiceCard();
+    logEvent('🧾','Factura generada','Resumen del carrito listo para pagar');
+    return {msg:'Te preparé la factura con el resumen. ¿Confirmas el pago?'};
+  }
+  if(name==='highlight_catalog'){
+    PRODUCTS.forEach(p=>addCard(p));
+    return {msg:'Estos son nuestros tratamientos. Toca cualquier tarjeta para agregarla, o pregúntame lo que quieras de cada una.'};
+  }
+  return null;
+}
+
+/* ================== VOZ: hablar ================== */
+async function speak(text){
+  if(!text) return;
+  try{
+    if(fillerAudio){ fillerAudio.pause(); fillerAudio=null; }
+    if(responseAudio){ responseAudio.pause(); responseAudio=null; }
+    const res = await fetch('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})});
+    if(!res.ok) throw 0;
+    const blob = await res.blob();
+    responseAudio = new Audio(URL.createObjectURL(blob));
+    setMode('speaking');
+    await responseAudio.play();
+    return new Promise(resolve=>{
+      responseAudio.onended = ()=>{ responseAudio=null; resolve(); };
+      responseAudio.onerror = ()=>{ responseAudio=null; resolve(); };
+    });
+  }catch(e){
+    try{
+      const u = new SpeechSynthesisUtterance(text); u.lang='es-CO'; u.rate=1.04;
+      speechSynthesis.speak(u);
+      return new Promise(r=>{ u.onend=r; u.onerror=r; });
+    }catch(_){ return; }
+  }
+}
+
+/* fillers mientras consulta */
+const FILLER_TXT = ['Un momentico, ya te cuento…','Déjame confirmar eso…','Al toque te respondo…'];
+async function playFiller(){
+  if(!speakOn || fillerAudio || !session) return;
+  try{
+    const res = await fetch('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:FILLER_TXT[Math.floor(Math.random()*3)]})});
+    if(!res.ok) return;
+    fillerAudio = new Audio(URL.createObjectURL(await res.blob()));
+    fillerAudio.volume = .85;
+    fillerAudio.play();
+  }catch(e){}
+}
+function stopFiller(){ if(fillerAudio){ try{fillerAudio.pause();}catch(_){} fillerAudio=null; } }
+
+/* ================== VOZ: escuchar continuo auto-reparado ================== */
+async function listen(){
+  if(busy || recording || !session || micBlocked) return;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    listenFails = 0;
+  }catch(e){
+    listenFails++;
+    if(listenFails === 1){
+      addMsg('🎙 Activa el micrófono: candado 🔒 de la barra → Permisos → Micrófono → Permitir. Mientras tanto, escríbeme abajo — contesto igual.', 'bot');
+      micBlocked = true;
+      setMode('idle');
+      textInput.focus();
+    }
+    return;
+  }
+  try{
+    chunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+  }catch(e){
+    listenFails++;
+    scheduleNextListen(1500); // reintento suave
+    return;
+  }
+  mediaRecorder.ondataavailable = e=>{ if(e.data.size) chunks.push(e.data); };
+  mediaRecorder.onstop = ()=>{
+    try{ stream.getTracks().forEach(t=>t.stop()); }catch(_){}
+    if(audioCtx){ audioCtx.close().catch(()=>{}); audioCtx=null; }
+    const blob = new Blob(chunks, {type: mediaRecorder.mimeType||'audio/webm'});
+    if(blob.size < 1300){ setMode('idle'); scheduleNextListen(400); return; } // toque accidental
+    transcribe(blob);
+  };
+  try{ mediaRecorder.start(); }
+  catch(e){ scheduleNextListen(1200); return; }
+  recording = true; startedAt = Date.now();
+  setMode('listening');
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  const src = audioCtx.createMediaStreamSource(stream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+  src.connect(analyser);
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  let spoke = false;
+  silenceAt = 0;
+  const vad = setInterval(()=>{
+    if(!recording){ clearInterval(vad); return; }
+    analyser.getByteFrequencyData(buf);
+    const level = buf.reduce((a,b)=>a+b,0) / buf.length;
+    const now = Date.now();
+    if(level > 14) { spoke = true; silenceAt = 0; }
+    else if(spoke && !silenceAt) silenceAt = now;
+    const maxMs = 16000;
+    if((spoke && silenceAt && now - silenceAt > 1300) || now - startedAt > maxMs){
+      clearInterval(vad);
+      stopRecording();
+    }
+  }, 120);
+}
+function stopRecording(){
+  if(!recording) return;
+  recording = false;
+  try{ mediaRecorder.stop(); }catch(_){}
+}
+function scheduleNextListen(ms){
+  setTimeout(()=>{ if(session && !busy && !micBlocked) listen(); }, ms||600);
+}
+
+/* ================== CEREBRO ================== */
+async function ask(text){
+  if(busy) return;
+  busy = true;
+  addMsg(text, 'user');
+  setMode('thinking');
+  playFiller();
+  let say = null, j = null;
+  try{
+    const res = await fetch('/api/voice-assistant', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text, history:window.__h||[]})});
+    j = await res.json();
+    window.__h = j.history || [];
+    stopFiller();
+    const r = j.action ? doAction(j.action, j.args||{}) : null;
+    say = (r && r.msg) ? r.msg : (j.answer || '¿Me lo repites?');
+  }catch(e){
+    stopFiller();
+    say = 'Uy, se me atravesó la conexión. ¿Me repites?';
+  }
+  addMsg(say, 'bot');
+  await speak(say);
+  busy = false;
+  setMode('idle');
+  scheduleNextListen(500); // conversación continua: vuelve a escuchar sola
+}
+
+async function transcribe(blob){
+  setMode('thinking');
+  playFiller();
+  try{
+    const b64 = await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(blob); });
+    const res = await fetch('/api/asr', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({audio:b64, mime:blob.type})});
+    const j = await res.json();
+    stopFiller();
+    if(j.ok && j.text){ busy=false; ask(j.text); return; }
+    setMode('idle');
+    scheduleNextListen(300);
+  }catch(e){
+    stopFiller();
+    setMode('idle');
+    scheduleNextListen(600);
+  }
+}
+
+/* ================== MODOS VISUALES ================== */
+function setMode(m){
+  orbWrap.className = 'orb-wrap ' + m;
+  orbWrap.dataset.mode = m;
+  if(m==='listening'){ statusEl.innerHTML='<span class="wave"><i></i><i></i><i></i><i></i><i></i></span> Te escucho… habla normal'; }
+  else if(m==='thinking'){ statusEl.textContent='Consultando…'; }
+  else if(m==='speaking'){ statusEl.textContent='Vali hablando…'; }
+  else if(session){ statusEl.textContent='Te escucho cada vez que hables · o escríbeme'; }
+  else { statusEl.textContent='Toca ✦ para activar tu micrófono'; }
+}
+
+/* teclado */
+textInput.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && textInput.value.trim()){
+    const v = textInput.value.trim(); textInput.value=''; ask(v);
+  }
+});
+
+/* orb: interrupción manual (barge-in) — lo único tocable */
+orbWrap.onclick = ()=>{
+  if(recording){ stopRecording(); }          // la corto y envía ya
+  else if(session && !busy && !micBlocked){ listen(); }
+};
+
+/* ================== INICIO ================== */
+function quickAsk(q){
+  if(!session){
+    document.getElementById('startBtn').click();
+    setTimeout(()=>ask(q), 400);
+    return;
+  }
+  document.getElementById('chips').style.display = 'none';
+  ask(q);
+}
+
+document.getElementById('startBtn').onclick = async ()=>{
+  document.getElementById('start').classList.add('hide');
+  session = true;
+  addMsg('Vali · DermaLuxe — sesión iniciada', 'sys');
+  updateBadge();
+  const saludo = '¡Hola! Soy Vali, tu asesora de belleza de DermaLuxe. Pregúntame por tratamientos, precios o disponibilidad — o toca una sugerencia. Yo te escucho y contesto sola.';
+  setMode('thinking');
+  fetch('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:saludo})}).catch(()=>{});
+  await speak(saludo);
+  addMsg(saludo, 'bot');
+  setMode('idle');
+  listen(); // ya está escuchando — sin tocar nada más
+};
+
+/* watchdog de escucha: si quedó colgada la sesión, se recupera sola */
+setInterval(()=>{
+  if(!session || busy) return;
+  if(!recording && !micBlocked){ scheduleNextListen(0); }
+}, 12000);
+</script>
+</body>
+</html>
