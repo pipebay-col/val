@@ -82,6 +82,7 @@
       };
 
       rec.onerror = function (e) {
+        setDbg('SR err: ' + e.error, '#F59E0B');
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
           window.micBlocked = true;
           const aviso = 'Necesito permiso del micrófono: toca el candado de la barra de dirección, permite el micrófono y recarga la página.';
@@ -93,6 +94,7 @@
 
       rec.onend = function () {
         activo = false;
+        setDbg('SR: reiniciando…', '#64748b');
         // conversación continua: reabrir si nadie habla y Val no está respondiendo
         if (window.session && !window.micBlocked) {
           window.busy = false; // desatascar busy si el cerebro dejó colgado el turno
@@ -103,6 +105,7 @@
 
       rec.start();
       activo = true;
+      setDbg('SR: escuchando', '#10B981');
       window.setMode && window.setMode('listening');
     } catch (e) {
       activo = false;
@@ -192,6 +195,15 @@
       }).catch(function(){});
     } catch (_) {}
   }
+
+  /* ===== DEBUG VISIBLE (discreto): estado real del SR en pantalla ===== */
+  const dbg = document.createElement('div');
+  dbg.id = 'val-sr-debug';
+  dbg.style.cssText = 'position:fixed;top:6px;right:8px;z-index:999;font-size:10px;color:#64748b;font-family:monospace;background:rgba(10,12,14,.7);padding:3px 8px;border-radius:8px;pointer-events:none;opacity:.85;';
+  document.body.appendChild(dbg);
+  function setDbg(txt, color) { dbg.textContent = txt; dbg.style.color = color || '#64748b'; }
+  window.__setValDbg = setDbg;
+  setDbg('SR: listo', '#64748b');
 
   console.log('[Val Listen-Solo] motor único SpeechRecognition + barge-in interim + tarjetas de servicios');
 })();

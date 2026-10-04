@@ -135,6 +135,11 @@ with open(out, 'w', encoding='utf-8') as f:
 import re as _re, io as _io
 SALUDO_PRODUCTO = "Hola! Soy Val, la asistente de voz de AplicatiBox. Esta es una demo de lo que Val puede hacer por tu negocio: te atiende por voz, te da precios y agenda citas. Prueba tocando el círculo y pregúntame algo."
 with _io.open(out, encoding='utf-8') as _f: _html = _f.read()
+# CACHE-BUSTING: version en cada script val-*.js (mata el cache de Pages en el movil)
+import time as _time
+_v = str(int(_time.time()))
+_html = _re.sub(r'(src="val-[a-z0-9\-]+\.js)"', r'\1?v=' + _v + '"', _html)
+print('CACHE-BUST v=' + _v)
 # Saludo producto (reemplaza el del core viejo venga de donde venga)
 _m = _re.search(r"const saludo = '([^']+)'", _html)
 if _m and 'Soy Val, tu asistente' not in _m.group(1):
