@@ -19,6 +19,13 @@ stitch_head = head_match.group(1) if head_match else ""
 body_match = re.search(r'<body[^>]*>([\s\S]*?)</body>', stitch_html)
 stitch_body = body_match.group(1) if body_match else ""
 stitch_body_clean = re.sub(r'<script>[\s\S]*?</script>\s*$', '', stitch_body)
+# CRÍTICO: el HTML de Pages ya puede traer inyecciones de fusiones previas —
+# eliminar TODAS las copias de los módulos val-*.js y el voice core viejo para
+# que queden exactamente UNA vez (evita duplicación acumulativa por regeneración).
+stitch_body_clean = re.sub(r'<script src="val-[a-z0-9\-]+\.js"></script>\s*', '', stitch_body_clean)
+stitch_body_clean = re.sub(r'/\* ====== ADAPTER: Stitch UI \+ Voice Core Original ====== \*/[\s\S]*?Val Fusion\] Stitch UI \+ voz real conectadas\';\s*\}\)\(\);\s*</script>\s*', '', stitch_body_clean)
+stitch_body_clean = re.sub(r'/\* ================== ESTADO ================== \*/[\s\S]*$', '', stitch_body_clean)
+stitch_body_clean = re.sub(r'<script>[\s\S]*?/api/tts[\s\S]*?</script>\s*$', '', stitch_body_clean)
 
 # 4. Adaptador: mapea IDs Stitch -> IDs del voice core original
 adapter = """
@@ -114,6 +121,7 @@ modulos = """<script src="val-config.js"></script>
 # 4c. Parche de UX de voz (post-core): anti-eco, VAD móvil, saludo único, estados sincronizados
 patch_ref = """<script src="val-ux-patch.js"></script>
 <script src="val-orb-mic.js"></script>
+<script src="val-waveform.js"></script>
 """
 
 # 5. HTML final fusionado
