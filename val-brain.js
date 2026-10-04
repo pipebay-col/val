@@ -94,7 +94,7 @@
       return { answer: `Tenemos varias opciones: ${lista.replace(/\n• /g, ', ')}. ¿Hay alguno que te llame la atención o te cuento más de alguno en particular?`, action: null, args: {} };
     }
     if (SALUDO_RX.test(t)) {
-      return { answer: `¡Hola, qué gusto! Soy ${nombreAsesora}, de ${nombreClinica}. Te cuento tratamientos, precios y te agendo tu cita cuando quieras. ¿En qué te ayudo?`, action: null, args: {} };
+      return { answer: '¡Hola! Soy Val, la asistente de voz de AplicatiBox. Estás viendo una demo con el catálogo de ejemplo de una clínica estética — pero Val se instala con los servicios de CUALQUIER negocio: clínicas, spas, salones, barberías. Pregúntame precios, tratamientos o pídeme una cita para ver cómo funciona.', action: null, args: {} };
     }
 
     // Instalación y multi-negocio: Val es producto de la agencia, instalable en cualquier negocio

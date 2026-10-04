@@ -29,7 +29,12 @@
 
   /* ============ ÚNICO MOTOR DE ESCUCHA ============ */
   function abrir() {
-    if (activo || !window.session) return;
+    if (activo) return;
+    if (!window.session) { // aún sin sesión: abrir igual para poder INTERRUMPIR la intro
+      // (el usuario que habla durante la intro demuestra intención de usarla)
+      window.session = true;
+      const st = document.getElementById('start'); st && st.classList.add('hide');
+    }
     try {
       rec = new SR();
       rec.lang = 'es-CO';
@@ -89,7 +94,8 @@
       rec.onend = function () {
         activo = false;
         // conversación continua: reabrir si nadie habla y Val no está respondiendo
-        if (window.session && !window.busy && !window.micBlocked) {
+        if (window.session && !window.micBlocked) {
+          window.busy = false; // desatascar busy si el cerebro dejó colgado el turno
           setTimeout(abrir, interrumpiendo ? 200 : 600);
           interrumpiendo = false;
         }

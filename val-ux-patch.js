@@ -176,5 +176,21 @@
     }
   }, 5000);
 
+
+  /* --- 7. ESTADOS REALES con TTS nativo: speechSynthesis dispara los modos --- */
+  if (window.speechSynthesis) {
+    const checkSpeaking = setInterval(function(){
+      const st = document.getElementById('status-subtitle');
+      if (window.speechSynthesis.speaking && !window.__valTTSspeaking) {
+        window.__valTTSspeaking = true;
+        window.setMode && window.setMode('speaking');
+      } else if (!window.speechSynthesis.speaking && window.__valTTSspeaking) {
+        window.__valTTSspeaking = false;
+        if (window.session && !window.busy) window.setMode && window.setMode('idle');
+      }
+    }, 300);
+  }
+
   console.log('[Val UX Patch] anti-eco + VAD móvil + saludo único + estados sincronizados');
+
 })();

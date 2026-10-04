@@ -13,6 +13,7 @@
 
 
 
+
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>Val | Concierge Clínico</title>
@@ -211,8 +212,11 @@
 
 
 
+
 </head>
 <body>
+
+
 
 
 
@@ -313,7 +317,7 @@
 <!-- Live Clinical Status Hierarchy -->
 <div class="mt-8 text-center px-4 max-w-xs transition-all duration-300">
 <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface tracking-tight mb-2" id="status-title">
-          Val — Asesora de Voz
+          Val — Asistente de Voz de AplicatiBox
         </h2>
 <p class="font-body-md text-body-md text-on-surface-variant/80 transition-all duration-300" id="status-subtitle">
           Toca el micrófono para hablar con Val
@@ -374,6 +378,7 @@
 
 
 
+
 <script src="val-config.js"></script>
 <script src="val-sheet.js"></script>
 <script src="val-quota.js"></script>
@@ -421,7 +426,7 @@
     const statusTitle = document.getElementById('status-title');
     const statusSubtitle = document.getElementById('status-subtitle');
     // El texto de estado lo gestiona SOLO val-ux-patch (un único dueño — sin loop de parpadeo)
-    if (statusTitle) statusTitle.textContent = 'Val — Asesora de Voz';
+    if (statusTitle) statusTitle.textContent = 'Val — Asistente de Voz de AplicatiBox';
     // Chips de Stitch -> prompts reales al cerebro
     const chipMap = {
       'Precio botox': 'Hola, ¿cuánto vale el botox de la frente?',
@@ -1082,7 +1087,7 @@ document.getElementById('startBtn').onclick = async ()=>{
   try{ window.ValQuota && window.ValQuota.nuevaSesion(); }catch(_){} // Val: nueva conversación del banco (§6.1)
   addMsg('Vali · DermaLuxe — sesión iniciada', 'sys');
   updateBadge();
-  const saludo = '¡Hola, qué gusto verte por DermaLuxe! Soy Val, tu asistente. Te cuento los tratamientos, te doy precios y te agendo tu cita cuando quieras. Toca el círculo y háblame normal.';
+  const saludo = 'Hola! Soy Val, la asistente de voz de AplicatiBox. Esta es una demo de lo que Val puede hacer por tu negocio: te atiende por voz, te da precios y agenda citas. Prueba tocando el círculo y pregúntame algo.';
   setMode('thinking');
   fetch('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:saludo})}).catch(()=>{});
   await speak(saludo);

@@ -133,7 +133,7 @@ with open(out, 'w', encoding='utf-8') as f:
 
 # 6. POST-PROCESOS PERMANENTES (idempotentes en cada regeneración)
 import re as _re, io as _io
-SALUDO_PRODUCTO = "¡Hola, qué gusto verte por DermaLuxe! Soy Val, tu asistente. Te cuento los tratamientos, te doy precios y te agendo tu cita cuando quieras. Toca el círculo y háblame normal."
+SALUDO_PRODUCTO = "Hola! Soy Val, la asistente de voz de AplicatiBox. Esta es una demo de lo que Val puede hacer por tu negocio: te atiende por voz, te da precios y agenda citas. Prueba tocando el círculo y pregúntame algo."
 with _io.open(out, encoding='utf-8') as _f: _html = _f.read()
 # Saludo producto (reemplaza el del core viejo venga de donde venga)
 _m = _re.search(r"const saludo = '([^']+)'", _html)
@@ -142,7 +142,8 @@ if _m and 'Soy Val, tu asistente' not in _m.group(1):
 # Textos de la demo DermaLuxe que confunden -> producto Val
 _html = _html.replace('SUGERENCIAS CLÍNICAS', 'Puedes preguntarme')
 _html = _html.replace('Sugerencias Clínicas', 'Puedes preguntarme')
-_html = _html.replace('Val Concierge', 'Val — Asesora de Voz')
+_html = _html.replace('Val Concierge', 'Val — Asistente de Voz de AplicatiBox')
+_html = _html.replace('Val — Asesora de Voz', 'Val — Asistente de Voz de AplicatiBox')
 with _io.open(out, 'w', encoding='utf-8') as _f: _f.write(_html)
 
 print("FUSED OK:", len(fused), "chars ->", out)

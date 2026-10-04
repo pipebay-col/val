@@ -24,7 +24,7 @@
       { dia: 'Sabado', apertura: '09:00', cierre: '14:00', activo: 'TRUE' },
       { dia: 'Domingo', apertura: '12:00', cierre: '16:00', activo: 'FALSE' },
     ],
-    config: { nombre_clinica: 'DermaLuxe Estética', nombre_asesora: 'Vali', whatsapp: '+573001234567', tono: 'cálido, es-CO', slots_min: '60', max_slots_respuesta: '4' },
+    config: { nombre_clinica: 'la clínica de ejemplo (DermaLuxe)', nombre_asesora: 'Vali', whatsapp: '+573001234567', tono: 'cálido, es-CO', slots_min: '60', max_slots_respuesta: '4' },
     ts: Date.now(),
   };
   // Override: la demo no depende del Sheet ni de Drive
