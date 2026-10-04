@@ -113,6 +113,7 @@ modulos = """<script src="val-config.js"></script>
 
 # 4c. Parche de UX de voz (post-core): anti-eco, VAD móvil, saludo único, estados sincronizados
 patch_ref = """<script src="val-ux-patch.js"></script>
+<script src="val-orb-mic.js"></script>
 """
 
 # 5. HTML final fusionado
