@@ -93,11 +93,11 @@
       return { answer: `Tenemos varias opciones: ${lista.replace(/\n• /g, ', ')}. ¿Hay alguno que te llame la atención o te cuento más de alguno en particular?`, action: null, args: {} };
     }
     if (SALUDO_RX.test(t)) {
-      return { answer: `¡Hola! Soy ${nombreAsesora} de ${nombreClinica}. 😊 Cuéntame, ¿en qué te puedo ayudar hoy? ¿Buscas algún tratamiento, quieres saber precios o te gustaría agendar una cita?`, action: null, args: {} };
+      return { answer: `¡Hola, qué gusto! Soy ${nombreAsesora}, la asesora virtual de ${nombreClinica}. Estoy aquí para contarte sobre nuestros tratamientos, darte precios y agendarte tu cita cuando quieras. ¿Qué te gustaría saber?`, action: null, args: {} };
     }
 
-    // §3.4: no sabe la respuesta → derivar
-    return { answer: `Esa pregunta se la respondo mejor un asesor humano de ${nombreClinica}. Te paso directo al WhatsApp para que te atiendan como se debe. 😊`, action: 'derivar', args: {} };
+    // §3.4 reformulado: no abre WhatsApp directo — pregunta primero qué necesita
+    return { answer: 'Claro que te ayudo. Cuéntame un poquito más: ¿buscas precio de algún tratamiento, quieres agendar una cita o prefieres que te ponga en contacto con la clínica?', action: null, args: {} };
   }
 
   function flujoAgenda(texto, t) {

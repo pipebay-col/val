@@ -59,6 +59,16 @@
         if (acumulado.trim()) {
           const texto = acumulado.trim();
           acumulado = '';
+          // FILTRO ANTI-RUIDO: frases cortas/basura del ASR no van al cerebro
+          // (evita el loop 'alborotado' y derivaciones sin sentido)
+          const normT = texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z\s]/g, '').trim();
+          const esBasura = !normT || normT.length < 3 ||
+            /^(si|no|ok|eh|ejem|mhm|mm+|ah+|uy|e+|a+|o+|uhm+|hum+|ya|dale|vale)(\s.*)?$/.test(normT) && normT.length < 8 ||
+            /(sonido|ruido|musica|ringtone|alarma|notificacion)/.test(normT);
+          if (esBasura) {
+            // ignorar en silencio: volver a escuchar sin responder nada
+            return;
+          }
           window.busy = false;
           window.setMode && window.setMode('thinking');
           cerrar();              // soltar el mic mientras procesa
