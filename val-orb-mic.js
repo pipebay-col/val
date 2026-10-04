@@ -16,7 +16,14 @@
   orbCore.style.cursor = 'pointer';
   orbCore.style.userSelect = 'none';
   orbCore.addEventListener('click', function(){
-    if (!window.session) { sb && sb.click(); return; }
+    if (!window.session) {
+      // abrir el MIC INMEDIATAMENTE (hablar durante la intro = barge-in natural)
+      window.session = true;
+      const st = document.getElementById('start'); st && st.classList.add('hide');
+      window.listen && window.listen();          // mic activo YA
+      sb && sb.click();                          // saludo en paralelo (no bloquea el mic)
+      return;
+    }
     if (window.recording) { window.stopRecording && window.stopRecording(); }
     else if (!window.busy && !window.micBlocked) { window.listen && window.listen(); }
   });

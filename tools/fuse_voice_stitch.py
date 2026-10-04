@@ -143,6 +143,9 @@ if _m and 'Soy Val, tu asistente' not in _m.group(1):
 _html = _html.replace('SUGERENCIAS CLÍNICAS', 'Puedes preguntarme')
 _html = _html.replace('Sugerencias Clínicas', 'Puedes preguntarme')
 _html = _html.replace('Val Concierge', 'Val — Asistente de Voz de AplicatiBox')
+_html = _html.replace('Val | Concierge Clínico', 'Val — Asistente de Voz de AplicatiBox')
+_html = _html.replace('Pídele a Vali:', 'Toca y pregúntame:')
+_html = _html.replace('Pídele a Val:', 'Toca y pregúntame:')
 _html = _html.replace('Val — Asesora de Voz', 'Val — Asistente de Voz de AplicatiBox')
 with _io.open(out, 'w', encoding='utf-8') as _f: _f.write(_html)
 

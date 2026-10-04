@@ -14,9 +14,10 @@
 
 
 
+
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<title>Val | Concierge Clínico</title>
+<title>Val — Asistente de Voz de AplicatiBox</title>
 <!-- Fonts & Material Icons -->
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -213,8 +214,11 @@
 
 
 
+
 </head>
 <body>
+
+
 
 
 
@@ -368,6 +372,7 @@
 </div>
 </div>
 <!-- INTERACTION LOGIC & VOICE ENGINE CONTROLLER -->
+
 
 
 
@@ -637,7 +642,7 @@ function renderCart(){
   const body = document.getElementById('cartBody');
   const n = cartCount();
   if(!n){
-    body.innerHTML = `<div class="cart-empty">Tu carrito está vacío 🌱<br><i>Pídele a Vali:</i> «muéstrame los tratamientos»</div>`;
+    body.innerHTML = `<div class="cart-empty">Tu carrito está vacío 🌱<br><i>Toca y pregúntame:</i> «muéstrame los tratamientos»</div>`;
     return;
   }
   const items = Object.entries(CART).map(([id,q])=>{
