@@ -1,6 +1,7 @@
 <!DOCTYPE html>
+<html lang="es">
+<head>
 
-<html class="dark" lang="es"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>Val | Concierge Clínico</title>
@@ -187,8 +188,11 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head>
-<body class="bg-background text-on-surface font-body-md select-none overflow-hidden m-0 p-0 antialiased flex items-center justify-center min-h-screen">
+  
+</head>
+<body>
+
+
 <!-- Mobile Viewport Shell (390px x 844px OLED Aesthetic Container) -->
 <div class="relative w-full max-w-[410px] h-[884px] max-h-[880px] bg-[#090b0e] overflow-hidden flex flex-col justify-between shadow-2xl border border-outline-variant/30 md:rounded-3xl">
 <!-- Micro-grid overlay & Ambient Vignette -->
@@ -316,187 +320,736 @@
 </div>
 </div>
 <!-- INTERACTION LOGIC & VOICE ENGINE CONTROLLER -->
+
+
 <script>
-    let currentState = 'idle';
-    const states = ['idle', 'listening', 'thinking', 'speaking'];
-    let isSheetCollapsed = false;
+/* ====== ADAPTER: Stitch UI + Voice Core Original ====== */
+(function() {
+  // Elementos del voice core original que el script espera encontrar por getElementById.
+  // El voice core hace sus propios getElementById, asi que creamos elementos fantasma
+  // y conectamos los reales del Stitch donde corresponde.
+  function ghost(id, tag) {
+    let el = document.getElementById(id);
+    if (!el) { el = document.createElement(tag || 'div'); el.id = id; el.style.display = 'none'; document.body.appendChild(el); }
+    return el;
+  }
+  // chat: el voice core le agrega mensajes — lo creamos oculto (Stitch usa status-title)
+  ghost('chat', 'div');
+  // viz canvas: no existe en Stitch
+  ghost('viz', 'canvas');
+  // chips: Stitch usa chips-container — clonar con id 'chips' para el voice core
+  const stitchChips = document.getElementById('chips-container');
+  const chipsGhost = ghost('chips', 'div');
+  if (stitchChips) { chipsGhost.style.display = 'none'; }
+  // start: contenedor del boton empezar — en Stitch el main-fab hace de start
+  const fab = document.getElementById('main-fab');
+  const startGhost = ghost('start', 'div');
+  // startBtn: el voice core le asigna onclick — crear boton invisible que dispara lo mismo
+  const sb = ghost('startBtn', 'button');
+  // status: el voice core escribe en statusEl (id 'status') — crear espejo del status-title
+  const statusGhost = ghost('status', 'div');
 
-    // Orb & UI DOM references
-    const orbCore = document.getElementById('orb-core');
-    const orbHalo = document.getElementById('orb-halo');
-    const orbLayerOuter = document.getElementById('orb-layer-outer');
-    const orbLayerMid = document.getElementById('orb-layer-mid');
-    const orbEqualizer = document.getElementById('orb-equalizer');
-    const orbThinkingIcon = document.getElementById('orb-thinking-icon');
-    const orbMicIcon = document.getElementById('orb-mic-icon');
-    const orbIdleIcon = document.getElementById('orb-idle-icon');
-    const orbRipple1 = document.getElementById('orb-ripple-1');
-    const orbRipple2 = document.getElementById('orb-ripple-2');
-
+  // Tras cargar el voice core, enganchar el FAB y chips reales de Stitch:
+  window.addEventListener('load', function() {
+    // FAB = orbWrap: click = barge-in / empezar a escuchar / iniciar sesion
+    if (fab) {
+      fab.addEventListener('click', function() {
+        if (!window.session) { sb.click(); return; }
+        if (window.recording) { window.stopRecording && window.stopRecording(); }
+        else if (!window.busy && !window.micBlocked) { window.listen && window.listen(); }
+      });
+    }
+    // Estado del voice core -> actualizar Stitch status-title/subtitle + orb
     const statusTitle = document.getElementById('status-title');
     const statusSubtitle = document.getElementById('status-subtitle');
-    const fabIcon = document.getElementById('fab-icon');
-    const fabGlow = document.getElementById('fab-glow');
-    const mainFab = document.getElementById('main-fab');
-
-    function resetOrbInternals() {
-      orbEqualizer.classList.add('hidden');
-      orbEqualizer.classList.remove('flex');
-      orbThinkingIcon.classList.add('hidden');
-      orbThinkingIcon.classList.remove('flex');
-      orbMicIcon.classList.add('hidden');
-      orbMicIcon.classList.remove('flex');
-      orbIdleIcon.classList.add('hidden');
-      orbIdleIcon.classList.remove('flex');
-
-      orbRipple1.classList.remove('animate-ripple');
-      orbRipple2.classList.remove('animate-ripple');
-      orbRipple1.classList.add('opacity-0');
-      orbRipple2.classList.add('opacity-0');
-
-      // Reset state switcher tab pills
-      states.forEach(st => {
-        const btn = document.getElementById(`btn-state-${st}`);
-        if(btn) {
-          btn.className = "flex-1 py-1.5 text-center rounded-full text-label-sm font-label-sm transition-all duration-300 text-on-surface-variant hover:text-on-surface";
+    const lastTitle = { t: '' };
+    const syncStatus = setInterval(function() {
+      if (window.statusEl && window.statusEl.textContent !== lastTitle.t) {
+        lastTitle.t = window.statusEl.textContent;
+        if (statusTitle) statusTitle.textContent = lastTitle.t;
+        // Mapear modo visual del voice core al orb de Stitch
+        const s = window.orbWrap ? (window.orbWrap.dataset.mode || window.orbWrap.className.match(/(idle|listening|thinking|speaking)/) || [])[0] : '';
+        if (s && window.setVoiceState) window.setVoiceState(s);
+      }
+      if (statusSubtitle && window.session) {
+        statusSubtitle.textContent = window.busy ? 'Consultando...' : 'Te escucho cada vez que hables';
+      }
+    }, 400);
+    // Chips de Stitch -> prompts reales al cerebro
+    const chipMap = {
+      'Precio botox': 'Hola, ¿cuánto vale el botox de la frente?',
+      'Agendar cita': 'Quiero agendar una cita',
+      'Tratamientos': '¿Qué tratamientos tienen?',
+      'Horarios': 'Horarios y disponibilidad',
+    };
+    document.querySelectorAll('#chips-container .chip, #chips-container button').forEach(function(el) {
+      var txt = (el.textContent || '').trim();
+      for (var k in chipMap) { if (txt.indexOf(k) >= 0) { el.dataset.prompt = chipMap[k]; break; } }
+    });
+    if (stitchChips) {
+      stitchChips.addEventListener('click', function(e) {
+        var chip = e.target.closest('[data-prompt]');
+        if (chip) {
+          if (!window.session) { sb.click(); setTimeout(function(){ window.ask && window.ask(chip.dataset.prompt); }, 500); }
+          else { window.ask && window.ask(chip.dataset.prompt); }
+          // Colapsar el sheet como pide el diseño
+          var sheet = document.getElementById('bottom-sheet');
+          if (sheet) sheet.classList.add('collapsed');
         }
       });
     }
+    console.log('[Val Fusion] Stitch UI + voz real conectadas');
+  });
+})();
+</script>
 
-    function setVoiceState(state) {
-      currentState = state;
-      resetOrbInternals();
+<script>
 
-      const activeBtn = document.getElementById(`btn-state-${state}`);
-      if(activeBtn) {
-        activeBtn.className = "flex-1 py-1.5 text-center rounded-full text-label-sm font-label-sm transition-all duration-300 bg-surface-container text-primary shadow-sm font-semibold";
-      }
+/* ================== ESTADO ================== */
+const chat = document.getElementById('chat');
+const statusEl = document.getElementById('status');
+const orbWrap = document.getElementById('orbWrap');
+const textInput = document.getElementById('textInput');
+const vizCv = document.getElementById('viz');
+let speakOn = true, busy = false, session = false;
+let stream = null, mediaRecorder = null, chunks = [], recording = false;
+let audioCtx = null, analyser = null, silenceAt = 0, startedAt = 0;
+let fillerAudio = null, responseAudio = null;
+let CART = {}, BOOKED = [];
+let listenFails = 0, micBlocked = false;
 
-      if (state === 'idle') {
-        // IDLE STATE
-        statusTitle.textContent = "Val Concierge";
-        statusSubtitle.textContent = "Toca el micrófono para hablar con Val";
-        orbIdleIcon.classList.remove('hidden');
-        orbIdleIcon.classList.add('flex');
+const PRODUCTS = [
+  {id:1, nombre:'Limpieza Facial Profunda', precio:180000, dur:'50 min', res:'Inmediato', emoji:'✨'},
+  {id:2, nombre:'Botox Zona Frontal', precio:950000, dur:'30 min', res:'Día 3-14', emoji:'💉'},
+  {id:3, nombre:'Relleno Labios', precio:850000, dur:'45 min', res:'5-7 días', emoji:'💋'},
+  {id:4, nombre:'Láser Depilatorio Full', precio:2400000, dur:'90 min', res:'-90% vello', emoji:'🔦'},
+  {id:5, nombre:'Peeling Químico', precio:320000, dur:'40 min', res:'1 semana', emoji:'🧪'},
+  {id:6, nombre:'Microdermoabrasión', precio:220000, dur:'35 min', res:'Inmediato', emoji:'💎'},
+];
+function fmt(n){ return '$' + n.toLocaleString('es-CO'); }
+function findProduct(nombre){
+  return PRODUCTS.find(x=>x.nombre.toLowerCase().includes(String(nombre||'').toLowerCase().split(' ')[0]));
+}
 
-        orbCore.className = "relative w-36 h-36 rounded-full flex items-center justify-center transition-all duration-700 shadow-2xl border border-primary/30 bg-gradient-to-b from-[#141d18] via-[#0d1210] to-[#070a08] overflow-hidden animate-pulse-slow";
-        orbHalo.className = "absolute inset-0 rounded-full filter blur-2xl transition-all duration-700 bg-primary/20 opacity-30";
-        orbLayerOuter.className = "absolute inset-4 rounded-full border border-outline-variant/40 animate-spin-slow transition-all duration-700";
-        orbLayerMid.className = "absolute inset-8 rounded-full animate-spin-reverse opacity-50 filter blur-[1px] transition-all duration-700 bg-gradient-to-tr from-surface-container-high via-primary-container/20 to-secondary/20";
+/* estrellas del fondo */
+(function(){
+  const s = document.getElementById('stars');
+  let html = '';
+  for(let i=0;i<26;i++){
+    html += `<i style="left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*4}s"></i>`;
+  }
+  s.innerHTML = html;
+})();
 
-        fabIcon.textContent = "mic";
-        fabIcon.className = "material-symbols-outlined text-primary text-3xl z-10 transition-transform group-hover:scale-110";
-        mainFab.className = "relative group w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none bg-[#111418] border border-primary/50 shadow-[0_0_24px_-4px_rgba(16,185,129,0.35)] active:scale-95";
-        fabGlow.className = "absolute inset-0 rounded-full bg-primary/20 filter blur-md opacity-70 group-hover:opacity-100 transition-opacity";
+/* ================== HOLOGRAMA DE MUJER ================== */
+const HOLO_SVG = `
+<svg viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="hg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#d4af37"/>
+    </linearGradient>
+    <linearGradient id="sg1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="rgba(52,211,153,0)"/>
+      <stop offset=".5" stop-color="rgba(110,231,183,.85)"/>
+      <stop offset="1" stop-color="rgba(212,175,55,0)"/>
+    </linearGradient>
+    <clipPath id="oc1"><circle cx="50" cy="50" r="37"/></clipPath>
+  </defs>
+  <g clip-path="url(#oc1)">
+    <circle class="ring" cx="50" cy="50" r="34" fill="none" stroke="rgba(110,231,183,.22)" stroke-dasharray="3 7"/>
+    <g class="glow">
+      <path d="M50 14 C36 14 28 24 27 38 C26 50 29 58 28 70 C34 66 36 62 37 56 C33 50 32 42 36 34 C40 26 46 24 50 24 C54 24 60 26 64 34 C68 42 67 50 63 56 C64 62 66 66 72 70 C71 58 74 50 73 38 C72 24 64 14 50 14 Z"
+            fill="rgba(52,211,153,.10)" stroke="url(#hg1)" stroke-width="1.3"/>
+      <ellipse cx="50" cy="44" rx="12.5" ry="15.5" fill="rgba(52,211,153,.05)" stroke="#6ee7b7" stroke-width="1.1" opacity=".92"/>
+      <path d="M41 39 Q44.5 37.4 48 39" stroke="rgba(110,231,183,.7)" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <path d="M52 39 Q55.5 37.4 59 39" stroke="rgba(110,231,183,.7)" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <g class="eyes">
+        <path d="M42.5 42.6 Q45.5 44.6 48.5 42.6" stroke="#34d399" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M51.5 42.6 Q54.5 44.6 57.5 42.6" stroke="#34d399" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </g>
+      <path d="M50 45 L48.8 49.5 L50.6 50" stroke="rgba(110,231,183,.55)" stroke-width=".9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path class="lips" d="M46.5 54 Q50 56.6 53.5 54" stroke="#d4af37" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <path d="M45 59 C45 63 44.5 65 43 67" stroke="rgba(110,231,183,.6)" stroke-width="1" fill="none"/>
+      <path d="M55 59 C55 63 55.5 65 57 67" stroke="rgba(110,231,183,.6)" stroke-width="1" fill="none"/>
+      <path d="M30 80 C35 68 42 63 50 63 C58 63 65 68 70 80" stroke="url(#hg1)" stroke-width="1.3" fill="rgba(52,211,153,.05)"/>
+      <circle cx="50" cy="66.5" r="1.1" fill="#d4af37"/>
+    </g>
+    <rect class="scan" x="14" y="49" width="72" height="2.4" rx="1.2" fill="url(#sg1)" opacity=".55"/>
+    <g class="particles" fill="#6ee7b7">
+      <circle cx="27" cy="30" r=".9" style="animation-delay:0s"/>
+      <circle cx="73" cy="36" r=".8" style="animation-delay:1.1s"/>
+      <circle cx="31" cy="66" r=".7" style="animation-delay:2.2s"/>
+      <circle cx="71" cy="62" r=".9" style="animation-delay:.6s"/>
+      <circle cx="63" cy="21" r=".6" style="animation-delay:1.7s"/>
+      <circle cx="39" cy="76" r=".8" style="animation-delay:2.8s"/>
+    </g>
+  </g>
+</svg>`;
+document.getElementById('holoDock').innerHTML = HOLO_SVG;
+document.getElementById('holoStart').innerHTML = HOLO_SVG;
 
-      } else if (state === 'listening') {
-        // LISTENING STATE
-        statusTitle.textContent = "Te escucho...";
-        statusSubtitle.textContent = "Habla con claridad, Val está analizando tu consulta clínica.";
-        orbMicIcon.classList.remove('hidden');
-        orbMicIcon.classList.add('flex');
+/* ================== VISUALIZADOR CIRCULAR DE VOZ ================== */
+const vizCtx = vizCv.getContext('2d');
+let vizLevels = new Array(64).fill(0);
+let vizAnim = null, targetLevel = 0, curLevel = 0;
 
-        orbRipple1.classList.remove('opacity-0');
-        orbRipple2.classList.remove('opacity-0');
-        orbRipple1.classList.add('animate-ripple');
-        orbRipple2.classList.add('animate-ripple');
+function vizLoop(){
+  const w = vizCv.width = vizCv.clientWidth * (window.devicePixelRatio||1);
+  const h = vizCv.height = vizCv.clientHeight * (window.devicePixelRatio||1);
+  vizCtx.clearRect(0,0,w,h);
+  const cx = w/2, cy = h/2;
+  const baseR = Math.min(w,h) * 0.30;
+  // nivel global suavizado
+  curLevel += (targetLevel - curLevel) * 0.18;
+  if(recording && analyser){
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(buf);
+    const now = buf.reduce((a,b)=>a+b,0)/buf.length;
+    targetLevel = Math.min(1, now/38);
+  } else { targetLevel *= 0.94; }
+  for(let i=0;i<vizLevels.length;i++){
+    const jitter = targetLevel>0.05 ? (Math.random()*0.5+0.5) : 0.06;
+    vizLevels[i] += ((curLevel*jitter) - vizLevels[i]) * 0.25;
+  }
+  const mode = orbWrap.dataset.mode;
+  const col = mode==='thinking' ? '56,189,248' : mode==='speaking' ? '212,175,55' : '52,211,153';
+  // barras radiales
+  for(let i=0;i<vizLevels.length;i++){
+    const ang = (i/vizLevels.length)*Math.PI*2 - Math.PI/2;
+    const len = baseR*0.14 + vizLevels[i]*baseR*0.55;
+    const x0 = cx + Math.cos(ang)*baseR, y0 = cy + Math.sin(ang)*baseR;
+    const x1 = cx + Math.cos(ang)*(baseR+len), y1 = cy + Math.sin(ang)*(baseR+len);
+    vizCtx.strokeStyle = `rgba(${col},${0.25+vizLevels[i]*0.6})`;
+    vizCtx.lineWidth = Math.max(1.5, (w/240));
+    vizCtx.lineCap = 'round';
+    vizCtx.beginPath(); vizCtx.moveTo(x0,y0); vizCtx.lineTo(x1,y1); vizCtx.stroke();
+  }
+  // anillo base
+  vizCtx.strokeStyle = `rgba(${col},.22)`;
+  vizCtx.lineWidth = 1;
+  vizCtx.beginPath(); vizCtx.arc(cx,cy,baseR,0,Math.PI*2); vizCtx.stroke();
+  vizAnim = requestAnimationFrame(vizLoop);
+}
+vizLoop();
 
-        orbCore.className = "relative w-40 h-40 rounded-full flex items-center justify-center transition-all duration-700 shadow-2xl border-2 border-primary bg-gradient-to-b from-[#0f291e] via-[#091712] to-[#060c09] overflow-hidden scale-105";
-        orbHalo.className = "absolute -inset-2 rounded-full filter blur-3xl transition-all duration-700 bg-primary/50 opacity-90";
-        orbLayerOuter.className = "absolute inset-2 rounded-full border border-primary/60 animate-spin-slow transition-all duration-700";
-        orbLayerMid.className = "absolute inset-6 rounded-full animate-spin-reverse opacity-90 filter blur-[2px] transition-all duration-700 bg-gradient-to-tr from-primary-container via-secondary to-primary";
+/* ================== BITÁCORA ================== */
+const LOG = [];
+function logEvent(ico, titulo, det){
+  const t = new Date();
+  const hh = t.getHours()%12||12, mm = String(t.getMinutes()).padStart(2,'0');
+  LOG.unshift({ico, titulo, det, t: `${hh}:${mm} ${t.getHours()<12?'a.m.':'p.m.'}`});
+  if(LOG.length > 80) LOG.pop();
+  const body = document.getElementById('logBody');
+  if(body) body.innerHTML = LOG.map(l=>`
+    <div class="log-item">
+      <div class="log-ico">${l.ico}</div>
+      <div class="log-txt"><b>${l.titulo}</b><span>${l.det}</span></div>
+      <div class="log-t">${l.t}</div>
+    </div>`).join('');
+}
+logEvent('✦','Sesión iniciada','Holograma de Vali activo — lista para conversar');
 
-        fabIcon.textContent = "stop";
-        fabIcon.className = "material-symbols-outlined text-primary text-3xl z-10";
-        mainFab.className = "relative group w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none bg-[#162a20] border-2 border-primary shadow-[0_0_36px_2px_rgba(16,185,129,0.5)] active:scale-95";
-        fabGlow.className = "absolute inset-0 rounded-full bg-primary/40 filter blur-md opacity-100";
+/* ================== DRAWERS ================== */
+const backdrop = document.getElementById('backdrop');
+const drawers = {cart: document.getElementById('drCart'), agenda: document.getElementById('drAgenda'), log: document.getElementById('drLog')};
+let openDr = null;
+function openDrawer(k){
+  if(openDr) drawers[openDr].classList.remove('open');
+  openDr = k;
+  drawers[k].classList.add('open');
+  backdrop.classList.add('show');
+  if(k==='cart') renderCart();
+  if(k==='agenda') renderAgenda();
+}
+function closeDrawers(){
+  Object.values(drawers).forEach(d=>d.classList.remove('open'));
+  backdrop.classList.remove('show');
+  openDr = null;
+}
+backdrop.onclick = closeDrawers;
+document.querySelectorAll('[data-close]').forEach(b=> b.onclick = closeDrawers);
+document.getElementById('fabCart').onclick = ()=> openDrawer('cart');
+document.getElementById('fabAgenda').onclick = ()=> openDrawer('agenda');
+document.getElementById('fabLog').onclick = ()=> openDrawer('log');
 
-      } else if (state === 'thinking') {
-        // THINKING STATE
-        statusTitle.textContent = "Consultando...";
-        statusSubtitle.textContent = "Consultando disponibilidad médica y protocolos...";
-        orbThinkingIcon.classList.remove('hidden');
-        orbThinkingIcon.classList.add('flex');
+/* ================== CARRITO ================== */
+function cartTotal(){ return Object.entries(CART).reduce((s,[id,q])=>s+PRODUCTS.find(p=>p.id==id).precio*q,0); }
+function cartCount(){ return Object.values(CART).reduce((a,b)=>a+b,0); }
+function updateBadge(){
+  const b = document.getElementById('cartBadge');
+  const n = cartCount();
+  b.textContent = n;
+  b.style.display = n ? 'flex' : 'none';
+}
+function renderCart(){
+  const body = document.getElementById('cartBody');
+  const n = cartCount();
+  if(!n){
+    body.innerHTML = `<div class="cart-empty">Tu carrito está vacío 🌱<br><i>Pídele a Vali:</i> «muéstrame los tratamientos»</div>`;
+    return;
+  }
+  const items = Object.entries(CART).map(([id,q])=>{
+    const p = PRODUCTS.find(x=>x.id==id);
+    return `<div class="cart-item">
+      <div class="ci-ico">${p.emoji}</div>
+      <div class="ci-mid"><b>${p.nombre}</b><span>${fmt(p.precio)} c/u</span></div>
+      <div class="ci-qty"><button class="qb" onclick="cartQty(${id},-1)">−</button><b>${q}</b><button class="qb" onclick="cartQty(${id},1)">+</button></div>
+    </div>`;
+  }).join('');
+  body.innerHTML = items + `
+    <div class="cart-foot">
+      <div class="cart-total"><span>Total</span><b>${fmt(cartTotal())}</b></div>
+      <button class="big-btn" onclick="checkoutDrawer()">Pagar ${fmt(cartTotal())} · Confirmar</button>
+    </div>`;
+}
+function cartQty(id, d){
+  CART[id] = (CART[id]||0) + d;
+  if(CART[id] <= 0) delete CART[id];
+  updateBadge();
+  renderCart();
+  logEvent('🛍','Carrito actualizado', cartCount() + ' servicio' + (cartCount()==1?'':'s') + ' · ' + fmt(cartTotal()));
+}
+function checkoutDrawer(){
+  addInvoiceCard();
+  logEvent('💳','Pago confirmado','Total ' + fmt(cartTotal()) + ' · factura enviada por WhatsApp');
+  closeDrawers();
+}
 
-        orbCore.className = "relative w-36 h-36 rounded-full flex items-center justify-center transition-all duration-700 shadow-2xl border border-amber-500/80 bg-gradient-to-b from-[#241808] via-[#170f05] to-[#0d0903] overflow-hidden";
-        orbHalo.className = "absolute -inset-1 rounded-full filter blur-2xl transition-all duration-700 bg-amber-500/30 opacity-70";
-        orbLayerOuter.className = "absolute inset-4 rounded-full border border-amber-400/40 animate-spin-slow transition-all duration-700";
-        orbLayerMid.className = "absolute inset-7 rounded-full animate-spin-reverse opacity-70 filter blur-[2px] transition-all duration-700 bg-gradient-to-tr from-amber-600 via-amber-400/30 to-amber-200/20";
+/* ================== AGENDA ================== */
+const DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const SLOTS = ['9:00','10:00','11:00','2:00','3:00','4:00','5:00'];
+const BUSY = {'1':['10:00','3:00'], '3':['9:00']};
+let selDia = null, selHora = null;
+function nextDays(n){
+  const out = [];
+  for(let i=0;i<n;i++){ const d = new Date(); d.setDate(d.getDate()+i); out.push(d); }
+  return out;
+}
+function renderAgenda(){
+  const body = document.getElementById('agendaBody');
+  const dias = nextDays(8).map((d,i)=>{
+    const on = selDia===i ? ' on' : '';
+    return `<div class="cal-day${on}" onclick="selDay(${i})"><b>${DIAS[d.getDay()]}</b><span>${d.getDate()} ${MESES[d.getMonth()]}</span></div>`;
+  }).join('');
+  let slots = '<div class="cal-slots">' + SLOTS.map(h=>{
+    const busy = selDia!=null && (BUSY[String(selDia)]||[]).includes(h);
+    const on = selHora===h ? ' on' : '';
+    return `<div class="slot${busy?' busy':''}${on}" ${busy?'':`onclick="selSlot('${h}')"`}>${busy?'✕ ':''}${h}</div>`;
+  }).join('') + '</div>';
+  let ok = '';
+  if(selDia!=null && selHora){
+    const d = nextDays(8)[selDia];
+    ok = `<div class="ok-box">✓ Fecha elegida: <b>${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]} · ${selHora}</b>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <input id="waNombre" placeholder="Tu nombre" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:9px 11px;color:#eef7f2;font-size:13px;outline:none">
+        <input id="waTel" placeholder="Celular WhatsApp" inputmode="tel" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:9px 11px;color:#eef7f2;font-size:13px;outline:none">
+      </div>
+      <button class="mini-btn" onclick="confirmarCita()">✅ Confirmar cita (te llega WhatsApp)</button>
+      <button class="mini-btn" onclick="downloadICS()">📥 Solo añadir a mi calendario (.ics)</button>
+      <div id="citaMsg" style="font-size:12px;margin-top:6px;color:#9fc4b7"></div></div>`;
+  }
+  body.innerHTML = `<div class="cal-days">${dias}</div>${slots}${ok}`;
+}
+let WA_SENT = false;
+async function confirmarCita(){
+  if(selDia==null || !selHora){ return; }
+  const nombre = (document.getElementById('waNombre')?.value || '').trim() || 'Visitante';
+  const tel = (document.getElementById('waTel')?.value || '').replace(/\D/g,'');
+  const msgEl = document.getElementById('citaMsg');
+  if(tel.length < 8){ msgEl.textContent = '✍ Escribe tu celular con indicativo (ej: 573001234567)'; return; }
+  msgEl.textContent = 'Agendando…';
+  const d = nextDays(8)[selDia];
+  const fecha = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  try{
+    const r = await fetch('/api/bookings', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({fecha, hora: selHora, nombre, telefono: tel, servicios: resumenCarrito()})});
+    const j = await r.json();
+    if(j.ok){
+      WA_SENT = !!j.whatsapp;
+      msgEl.innerHTML = j.whatsapp
+        ? '✅ <b>Cita confirmada.</b> Te llega el WhatsApp ahora mismo ☕'
+        : '✅ <b>Cita confirmada.</b> (la línea está ocupada — te contactan al abrir)';
+      logEvent('📅','Cita CONFIRMADA', `${nombre} · ${DIAS[d.getDay()]} ${d.getDate()} · ${selHora} · WhatsApp ${j.whatsapp?'enviado':'pendiente'}`);
+      addBookingCard(selHora + ' — ' + DIAS[d.getDay()]);
+    } else { msgEl.textContent = 'Uy, no pude agendar. ¿Intentas de nuevo?'; }
+  }catch(e){ msgEl.textContent = 'Uy, falló la conexión. ¿Intentas de nuevo?'; }
+}
+function resumenCarrito(){
+  if(!cartCount()) return '';
+  return Object.entries(CART).map(([id,q])=>q+'x '+PRODUCTS.find(p=>p.id==id).nombre).join(', ');
+}
+function selDay(i){ selDia = i; selHora = null; renderAgenda(); }
+function selSlot(h){ selHora = h; renderAgenda();
+  const d = nextDays(8)[selDia];
+  logEvent('📅','Fecha elegida', `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} · ${h} · sede El Poblado`);
+}
+function downloadICS(){
+  if(selDia==null || !selHora) return;
+  const d = nextDays(8)[selDia];
+  const [h,m] = selHora.includes(':') ? selHora.split(':').map(Number) : [Number(selHora),0];
+  const hh = h < 8 ? h + 12 : h;
+  const pad = x => String(x).padStart(2,'0');
+  const f = x => `${x.getFullYear()}${pad(x.getMonth()+1)}${pad(x.getDate())}T${pad(x.getHours())}${pad(x.getMinutes())}00`;
+  const ini = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, m||0);
+  const fin = new Date(ini.getTime() + 45*60000);
+  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//DermaLuxe//Vali//ES','BEGIN:VEVENT',
+    'UID:' + Date.now() + '@dermaluxe', 'DTSTAMP:' + f(new Date()), 'DTSTART:' + f(ini), 'DTEND:' + f(fin),
+    'SUMMARY:DermaLuxe — Cita de valoración', 'LOCATION:DermaLuxe El Poblado, Medellín',
+    'DESCRIPTION:Cita agendada con Vali (IA). Llega 10 min antes.',
+    'BEGIN:VALARM','TRIGGER:-PT60M','ACTION:DISPLAY','DESCRIPTION:Tu cita en DermaLuxe es en 1 hora','END:VALARM',
+    'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([ics], {type:'text/calendar'}));
+  a.download = 'cita-dermaluxe.ics';
+  a.click();
+  logEvent('📥','Calendario','Archivo .ics descargado — recordatorio 1h antes');
+}
 
-        fabIcon.textContent = "hourglass_top";
-        fabIcon.className = "material-symbols-outlined text-amber-400 text-3xl z-10 animate-spin";
-        mainFab.className = "relative group w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none bg-[#1c160e] border border-amber-500/50 shadow-[0_0_24px_-2px_rgba(245,158,11,0.35)] active:scale-95";
-        fabGlow.className = "absolute inset-0 rounded-full bg-amber-500/20 filter blur-md opacity-70";
+/* ================== UI helpers ================== */
+function addMsg(text, cls){
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.textContent = text;
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+  return d;
+}
+function addCard(p, note){
+  const c = document.createElement('div');
+  c.className = 'card';
+  c.innerHTML = `
+    <div class="card-head">
+      <div><h4>${p.nombre}</h4></div>
+      <div class="card-emoji">${p.emoji}</div>
+    </div>
+    <div class="tags">
+      <span class="tag price">${fmt(p.precio)}</span>
+      <span class="tag">⏱ ${p.dur}</span>
+      <span class="tag gold">✦ ${p.res}</span>
+    </div>
+    ${note ? `<div style="font-size:12.5px;color:#8fb0a5;margin:-4px 0 12px">${note}</div>` : ''}
+    <div class="card-row">
+      <button class="card-btn primary">+ Agregar</button>
+      <button class="card-btn ghost">Agendar</button>
+    </div>`;
+  const [addBtn, agBtn] = c.querySelectorAll('.card-btn');
+  addBtn.onclick = ()=>{ addToCart(p, 1, c); };
+  agBtn.onclick = ()=>{ ask('agéndame una cita'); c.remove(); };
+  chat.appendChild(c);
+  chat.scrollTop = chat.scrollHeight;
+  return c;
+}
+function addToCart(p, q, fromCard){
+  CART[p.id] = (CART[p.id]||0) + q;
+  updateBadge();
+  logEvent('🛍','Agregado al carrito', p.nombre + ' · ' + fmt(p.precio));
+  if(fromCard){
+    fromCard.querySelector('.card-row').innerHTML =
+      `<div style="width:100%;text-align:center;font-weight:800;color:#34d399;padding:6px">✓ Agregado al carrito — ${fmt(p.precio*q)}</div>`;
+    setTimeout(()=>fromCard.remove(), 2600);
+  }
+}
+function addBookingCard(hora){
+  const c = document.createElement('div');
+  c.className = 'card';
+  c.innerHTML = `
+    <div class="card-head"><div><h4>Cita agendada ✓</h4></div><div class="card-emoji">📅</div></div>
+    <div class="tags"><span class="tag gold">Hoy · ${hora}</span><span class="tag">Valoración incluida</span></div>
+    <div style="font-size:13px;color:#9fc4b7">Te llega la confirmación por WhatsApp con la dirección. ¡Te espero con un cafecito!</div>`;
+  chat.appendChild(c);
+  chat.scrollTop = chat.scrollHeight;
+}
+function addInvoiceCard(){
+  const items = Object.values(CART).reduce((a,b)=>a+b,0);
+  if(!items){ addMsg('Tu carrito está vacío — ¿agrego algo primero?', 'bot'); return; }
+  const total = Object.entries(CART).reduce((s,[id,q])=>s+PRODUCTS.find(p=>p.id==id).precio*q,0);
+  const det = Object.entries(CART).map(([id,q])=>
+    `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13.5px">
+       <span>${q}× ${PRODUCTS.find(p=>p.id==id).nombre}</span><b>${fmt(PRODUCTS.find(p=>p.id==id).precio*q)}</b></div>`).join('');
+  const c = document.createElement('div');
+  c.className = 'card';
+  c.innerHTML = `
+    <div class="card-head"><div><h4>Tu factura 🧾</h4></div><div class="card-emoji">💳</div></div>
+    ${det}
+    <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(212,175,55,.4);margin-top:8px;padding-top:8px">
+      <b>Total</b><b style="color:#d4af37">${fmt(total)}</b></div>
+    <div class="card-row" style="margin-top:12px">
+      <button class="card-btn primary">Confirmar pago</button>
+      <button class="card-btn ghost">Seguir viendo</button>
+    </div>`;
+  const [pay, more] = c.querySelectorAll('.card-btn');
+  pay.onclick = ()=>{ pay.textContent='✓ Pagado'; pay.style.opacity=.55; more.remove();
+    speak('Listo, pago confirmado. Te envío la factura y la confirmación de tu cita por WhatsApp.'); };
+  more.onclick = ()=> c.remove();
+  chat.appendChild(c);
+  chat.scrollTop = chat.scrollHeight;
+}
 
-      } else if (state === 'speaking') {
-        // SPEAKING STATE
-        statusTitle.textContent = "Val hablando";
-        statusSubtitle.textContent = "“Para toxina botulínica en tercio superior disponemos de citas con la Dra. Méndez mañana a las 11:00.”";
-        orbEqualizer.classList.remove('hidden');
-        orbEqualizer.classList.add('flex');
+/* ================== ACCIONES ================== */
+function doAction(name, args){
+  /* ===== Val v1.0: acciones del cerebro local (ValBrain §3) ===== */
+  if(name==='derivar'){
+    window.__valAbrirWa && window.__valAbrirWa('Hola, vengo de la página web y quiero hablar con un asesor humano, por favor.');
+    logEvent('🙋','Derivación a humano', 'Transferido por WhatsApp');
+    return {msg:'Listo, te abrí el WhatsApp de la clínica para que un asesor humano te atienda. ¿Algo más en lo que te sirva?'};
+  }
+  if(name==='confirmar_cita'){
+    window.__valAbrirWa && window.__valAbrirWa(args && args.mensaje);
+    logEvent('📅','Cita confirmada', 'Resumen enviado por WhatsApp');
+    addBookingCard('Confirmada — WhatsApp');
+    return {msg:'¡Tu cita quedó enviada! La clínica te confirma por WhatsApp enseguida.'};
+  }
+  if(name==='quota_exhausted'){
+    const u = args && args.url ? args.url : '#';
+    try{ window.open(u, '_blank'); }catch(_){}
+    return {msg:'Se agotó tu prueba gratuita. Activa Val Pro para uso ilimitado — te abrí la página de planes.'};
+  }
+  const p = args && args.producto ? findProduct(args.producto) : null;
+  if(name==='show_card' || name==='highlight_product'){
+    if(p) addCard(p);
+    return null;
+  }
+  if(name==='add_to_cart'){
+    if(p){ addToCart(p, args.cantidad||1); addCard(p); return {msg:`Listo, ya te quedó ${p.nombre} en el carrito. ¿Te cuento el proceso o agendamos tu cita?`}; }
+  }
+  if(name==='book_slot'){
+    const hora = args && args.hora ? args.hora : '3:30 PM';
+    addBookingCard(hora);
+    logEvent('📅','Cita agendada por voz', 'Hoy · ' + hora + ' · valoración incluida');
+    return {msg:`¡Perfecto! Cita agendada para las ${hora}. Te llega la confirmación con la dirección. ¿Necesitas algo más?`};
+  }
+  if(name==='cart_summary'){
+    const items = Object.values(CART).reduce((a,b)=>a+b,0);
+    if(!items) return {msg:'Todavía no llevas nada en el carrito. ¿Te muestro los favoritos de la casa?'};
+    const total = Object.entries(CART).reduce((s,[id,q])=>s+PRODUCTS.find(p=>p.id==id).precio*q,0);
+    const det = Object.entries(CART).map(([id,q])=>`${q} ${PRODUCTS.find(x=>x.id==id).nombre}`).join(', ');
+    return {msg:`Llevas ${items}: ${det}. Total ${fmt(total)} pesos. ¿Confirmamos o agregas algo más?`};
+  }
+  if(name==='clear_cart'){
+    CART = {}; updateBadge(); return {msg:'Listo, carrito vacío. Empezamos de cero — ¿qué te llama la atención?'};
+  }
+  if(name==='checkout'){
+    addInvoiceCard();
+    logEvent('🧾','Factura generada','Resumen del carrito listo para pagar');
+    return {msg:'Te preparé la factura con el resumen. ¿Confirmas el pago?'};
+  }
+  if(name==='highlight_catalog'){
+    PRODUCTS.forEach(p=>addCard(p));
+    return {msg:'Estos son nuestros tratamientos. Toca cualquier tarjeta para agregarla, o pregúntame lo que quieras de cada una.'};
+  }
+  return null;
+}
 
-        orbCore.className = "relative w-38 h-38 rounded-full flex items-center justify-center transition-all duration-700 shadow-2xl border-2 border-cyan-400/90 bg-gradient-to-b from-[#08202d] via-[#05141c] to-[#03090d] overflow-hidden";
-        orbHalo.className = "absolute -inset-2 rounded-full filter blur-2xl transition-all duration-700 bg-cyan-400/35 opacity-80";
-        orbLayerOuter.className = "absolute inset-3 rounded-full border border-cyan-400/50 animate-spin-slow transition-all duration-700";
-        orbLayerMid.className = "absolute inset-6 rounded-full animate-spin-reverse opacity-80 filter blur-[1px] transition-all duration-700 bg-gradient-to-tr from-cyan-600/40 via-blue-500/30 to-teal-300/40";
+/* ================== VOZ: hablar ================== */
+async function speak(text){
+  if(!text) return;
+  try{
+    if(fillerAudio){ fillerAudio.pause(); fillerAudio=null; }
+    if(responseAudio){ responseAudio.pause(); responseAudio=null; }
+    const res = await fetch('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})});
+    if(!res.ok) throw 0;
+    const blob = await res.blob();
+    responseAudio = new Audio(URL.createObjectURL(blob));
+    setMode('speaking');
+    await responseAudio.play();
+    return new Promise(resolve=>{
+      responseAudio.onended = ()=>{ responseAudio=null; resolve(); };
+      responseAudio.onerror = ()=>{ responseAudio=null; resolve(); };
+    });
+  }catch(e){
+    try{
+      const u = new SpeechSynthesisUtterance(text); u.lang='es-CO'; u.rate=1.04;
+      speechSynthesis.speak(u);
+      return new Promise(r=>{ u.onend=r; u.onerror=r; });
+    }catch(_){ return; }
+  }
+}
 
-        fabIcon.textContent = "volume_up";
-        fabIcon.className = "material-symbols-outlined text-cyan-300 text-3xl z-10";
-        mainFab.className = "relative group w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none bg-[#091b24] border border-cyan-400/70 shadow-[0_0_28px_0px_rgba(6,182,212,0.4)] active:scale-95";
-        fabGlow.className = "absolute inset-0 rounded-full bg-cyan-400/30 filter blur-md opacity-90";
-      }
+/* fillers mientras consulta */
+const FILLER_TXT = ['Un momentico, ya te cuento…','Déjame confirmar eso…','Al toque te respondo…'];
+async function playFiller(){
+  if(!speakOn || fillerAudio || !session) return;
+  try{
+    const res = await fetch('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:FILLER_TXT[Math.floor(Math.random()*3)]})});
+    if(!res.ok) return;
+    fillerAudio = new Audio(URL.createObjectURL(await res.blob()));
+    fillerAudio.volume = .85;
+    fillerAudio.play();
+  }catch(e){}
+}
+function stopFiller(){ if(fillerAudio){ try{fillerAudio.pause();}catch(_){} fillerAudio=null; } }
+
+/* ================== VOZ: escuchar continuo auto-reparado ================== */
+async function listen(){
+  if(busy || recording || !session || micBlocked) return;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    listenFails = 0;
+  }catch(e){
+    listenFails++;
+    if(listenFails === 1){
+      addMsg('🎙 Activa el micrófono: candado 🔒 de la barra → Permisos → Micrófono → Permitir. Mientras tanto, escríbeme abajo — contesto igual.', 'bot');
+      micBlocked = true;
+      setMode('idle');
+      textInput.focus();
     }
-
-    // Toggle FAB Click
-    function toggleListeningFAB() {
-      if (currentState === 'idle') {
-        setVoiceState('listening');
-      } else if (currentState === 'listening') {
-        setVoiceState('thinking');
-        setTimeout(() => {
-          if (currentState === 'thinking') {
-            setVoiceState('speaking');
-          }
-        }, 1800);
-      } else {
-        setVoiceState('idle');
-      }
+    return;
+  }
+  try{
+    chunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+  }catch(e){
+    listenFails++;
+    scheduleNextListen(1500); // reintento suave
+    return;
+  }
+  mediaRecorder.ondataavailable = e=>{ if(e.data.size) chunks.push(e.data); };
+  mediaRecorder.onstop = ()=>{
+    try{ stream.getTracks().forEach(t=>t.stop()); }catch(_){}
+    if(audioCtx){ audioCtx.close().catch(()=>{}); audioCtx=null; }
+    const blob = new Blob(chunks, {type: mediaRecorder.mimeType||'audio/webm'});
+    if(blob.size < 1300){ setMode('idle'); scheduleNextListen(400); return; } // toque accidental
+    try{ window.ValQuota && window.ValQuota.registrarVoz((Date.now()-startedAt)/1000); }catch(_){} // Val: banco de minutos (§6.1)
+    transcribe(blob);
+  };
+  try{ mediaRecorder.start(); }
+  catch(e){ scheduleNextListen(1200); return; }
+  recording = true; startedAt = Date.now();
+  setMode('listening');
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  const src = audioCtx.createMediaStreamSource(stream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+  src.connect(analyser);
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  let spoke = false;
+  silenceAt = 0;
+  const vad = setInterval(()=>{
+    if(!recording){ clearInterval(vad); return; }
+    analyser.getByteFrequencyData(buf);
+    const level = buf.reduce((a,b)=>a+b,0) / buf.length;
+    const now = Date.now();
+    if(level > 14) { spoke = true; silenceAt = 0; }
+    else if(spoke && !silenceAt) silenceAt = now;
+    const maxMs = 16000;
+    if((spoke && silenceAt && now - silenceAt > 1300) || now - startedAt > maxMs){
+      clearInterval(vad);
+      stopRecording();
     }
+  }, 120);
+}
+function stopRecording(){
+  if(!recording) return;
+  recording = false;
+  try{ mediaRecorder.stop(); }catch(_){}
+}
+function scheduleNextListen(ms){
+  setTimeout(()=>{ if(session && !busy && !micBlocked) listen(); }, ms||600);
+}
 
-    // Click on central orb cycles forward through states
-    function cycleNextState() {
-      const currentIndex = states.indexOf(currentState);
-      const nextIndex = (currentIndex + 1) % states.length;
-      setVoiceState(states[nextIndex]);
-    }
+/* ================== CEREBRO ================== */
+async function ask(text){
+  if(busy) return;
+  busy = true;
+  addMsg(text, 'user');
+  setMode('thinking');
+  playFiller();
+  let say = null, j = null;
+  try{
+    const res = await fetch('/api/voice-assistant', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text, history:window.__h||[]})});
+    j = await res.json();
+    window.__h = j.history || [];
+    stopFiller();
+    const r = j.action ? doAction(j.action, j.args||{}) : null;
+    say = (r && r.msg) ? r.msg : (j.answer || '¿Me lo repites?');
+  }catch(e){
+    stopFiller();
+    say = 'Uy, se me atravesó la conexión. ¿Me repites?';
+  }
+  addMsg(say, 'bot');
+  await speak(say);
+  busy = false;
+  setMode('idle');
+  scheduleNextListen(500); // conversación continua: vuelve a escuchar sola
+}
 
-    // Bottom Sheet collapse toggle
-    function toggleBottomSheet() {
-      const sheet = document.getElementById('chips-container');
-      const icon = document.getElementById('collapse-icon');
-      if (isSheetCollapsed) {
-        sheet.classList.remove('hidden');
-        icon.textContent = 'keyboard_arrow_down';
-        isSheetCollapsed = false;
-      } else {
-        sheet.classList.add('hidden');
-        icon.textContent = 'keyboard_arrow_up';
-        isSheetCollapsed = true;
-      }
-    }
+async function transcribe(blob){
+  setMode('thinking');
+  playFiller();
+  try{
+    const b64 = await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(blob); });
+    const res = await fetch('/api/asr', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({audio:b64, mime:blob.type})});
+    const j = await res.json();
+    stopFiller();
+    if(j.ok && j.text){ busy=false; ask(j.text); return; }
+    setMode('idle');
+    scheduleNextListen(300);
+  }catch(e){
+    stopFiller();
+    setMode('idle');
+    scheduleNextListen(600);
+  }
+}
 
-    // Chip selection interaction
-    function handleChipSelect(promptText) {
-      // Auto-collapse sheet slightly or show action
-      statusTitle.textContent = promptText;
-      statusSubtitle.textContent = `Procesando consulta médica sobre "${promptText}"...`;
-      setVoiceState('thinking');
-      setTimeout(() => {
-        setVoiceState('speaking');
-      }, 1500);
-    }
+/* ================== MODOS VISUALES ================== */
+function setMode(m){
+  orbWrap.className = 'orb-wrap ' + m;
+  orbWrap.dataset.mode = m;
+  if(m==='listening'){ statusEl.innerHTML='<span class="wave"><i></i><i></i><i></i><i></i><i></i></span> Te escucho… habla normal'; }
+  else if(m==='thinking'){ statusEl.textContent='Consultando…'; }
+  else if(m==='speaking'){ statusEl.textContent='Vali hablando…'; }
+  else if(session){ statusEl.textContent='Te escucho cada vez que hables · o escríbeme'; }
+  else { statusEl.textContent='Toca ✦ para activar tu micrófono'; }
+}
 
-    // Initialize Default State
-    setVoiceState('idle');
-  </script>
-</body></html>
+/* teclado */
+textInput.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && textInput.value.trim()){
+    const v = textInput.value.trim(); textInput.value=''; ask(v);
+  }
+});
+
+/* orb: interrupción manual (barge-in) — lo único tocable */
+orbWrap.onclick = ()=>{
+  if(recording){ stopRecording(); }          // la corto y envía ya
+  else if(session && !busy && !micBlocked){ listen(); }
+};
+
+/* ================== INICIO ================== */
+function quickAsk(q){
+  if(!session){
+    document.getElementById('startBtn').click();
+    setTimeout(()=>ask(q), 400);
+    return;
+  }
+  document.getElementById('chips').style.display = 'none';
+  ask(q);
+}
+
+document.getElementById('startBtn').onclick = async ()=>{
+  document.getElementById('start').classList.add('hide');
+  session = true;
+  try{ window.ValQuota && window.ValQuota.nuevaSesion(); }catch(_){} // Val: nueva conversación del banco (§6.1)
+  addMsg('Vali · DermaLuxe — sesión iniciada', 'sys');
+  updateBadge();
+  const saludo = '¡Hola! Soy Vali, tu asesora de belleza de DermaLuxe. Pregúntame por tratamientos, precios o disponibilidad — o toca una sugerencia. Yo te escucho y contesto sola.';
+  setMode('thinking');
+  fetch('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:saludo})}).catch(()=>{});
+  await speak(saludo);
+  addMsg(saludo, 'bot');
+  setMode('idle');
+  listen(); // ya está escuchando — sin tocar nada más
+};
+
+/* watchdog de escucha: si quedó colgada la sesión, se recupera sola */
+setInterval(()=>{
+  if(!session || busy) return;
+  if(!recording && !micBlocked){ scheduleNextListen(0); }
+}, 12000);
+
+</script>
+</body>
+</html>
