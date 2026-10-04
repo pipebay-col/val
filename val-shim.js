@@ -103,46 +103,4 @@
   }
   // exponer para el parche del HTML (lo llama el doAction del demo extendido)
   window.__valAbrirWa = abrirWa;
-
-/* ================= BARGE-IN (interrupción real) ================= */
-// Hook para que el demo interrumpa TTS cuando usuario habla
-window.__valBargeIn = function() {
-  if (window.speakOn && window.responseAudio) {
-    try { window.responseAudio.pause(); window.responseAudio = null; } catch(_) {}
-    window.stopFiller && window.stopFiller();
-    window.setMode && window.setMode('listening');
-    window.listen && window.listen(); // empieza a escuchar ya
-    return true;
-  }
-  return false;
-};
-
-// Detectar voz del usuario mientras Val habla (usando analyser si existe)
-let __bargeInterval = null;
-function __startBargeDetection() {
-  if (__bargeInterval) return;
-  __bargeInterval = setInterval(() => {
-    if (window.speakOn && window.responseAudio && !window.recording && !window.micBlocked && window.analyser) {
-      const buf = new Uint8Array(window.analyser.frequencyBinCount);
-      window.analyser.getByteFrequencyData(buf);
-      const level = buf.reduce((a,b)=>a+b,0) / buf.length;
-      if (level > 18) { // umbral de voz detectada
-        window.__valBargeIn();
-      }
-    }
-  }, 150);
-}
-function __stopBargeDetection() {
-  if (__bargeInterval) { clearInterval(__bargeInterval); __bargeInterval = null; }
-}
-// Auto-arrancar cuando empiece a hablar Val
-const _origSpeak = window.speak;
-if (_origSpeak) {
-  window.speak = async function(text) {
-    __startBargeDetection();
-    try { return await _origSpeak(text); }
-    finally { __stopBargeDetection(); }
-  };
-}
-
 })();
