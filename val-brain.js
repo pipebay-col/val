@@ -72,7 +72,7 @@
 
     const s = findServicio(t);
     if (s && PRECIO_RX.test(t)) {
-      return { answer: `El ${s.nombre} tiene un valor de ${fmt(s.precio_cop)} y dura ${s.duracion_min} minutos. ${s.descripcion}. ¿Te gustaría que te lo agende?`, action: null, args: {} };
+      return { answer: `El ${s.nombre} son ${fmt(s.precio_cop)} y dura ${s.duracion_min} min. ${s.descripcion} ¿Te cuento cómo es el proceso o prefieres que miremos disponibilidad para agendar?`, action: null, args: {} };
     }
     if (s) {
       return { answer: `${s.nombre}: ${s.descripcion}. Dura ${s.duracion_min} minutos y su valor es ${fmt(s.precio_cop)}. ¿Quieres que te lo agende?`, action: null, args: {} };
@@ -83,14 +83,14 @@
     }
     if (SERVICIOS_RX.test(t)) {
       const lista = DATA.catalogo.slice(0, 5).map(x => '• ' + x.nombre).join('\n');
-      return { answer: 'Estos son algunos de nuestros servicios:\n' + lista + '\n¿Cuál te interesa?', action: null, args: {} };
+      return { answer: `Tenemos varias opciones: ${lista.replace(/\n• /g, ', ')}. ¿Hay alguno que te llame la atención o te cuento más de alguno en particular?`, action: null, args: {} };
     }
     if (SALUDO_RX.test(t)) {
-      return { answer: `¡Hola! Qué gusto. Soy ${nombreAsesora}, asesora de ${nombreClinica}. Pregúntame por tratamientos, precios o disponibilidad — o si quieres, te agendo tu cita ahora mismo.`, action: null, args: {} };
+      return { answer: `¡Hola! Soy ${nombreAsesora} de ${nombreClinica}. 😊 Cuéntame, ¿en qué te puedo ayudar hoy? ¿Buscas algún tratamiento, quieres saber precios o te gustaría agendar una cita?`, action: null, args: {} };
     }
 
     // §3.4: no sabe la respuesta → derivar
-    return { answer: 'Esa consulta la responde mejor un asesor humano de ' + nombreClinica + '. Te paso el WhatsApp directo para que te respondan con precisión.', action: 'derivar', args: {} };
+    return { answer: `Esa pregunta se la respondo mejor un asesor humano de ${nombreClinica}. Te paso directo al WhatsApp para que te atiendan como se debe. 😊`, action: 'derivar', args: {} };
   }
 
   function flujoAgenda(texto, t) {

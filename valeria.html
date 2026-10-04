@@ -363,6 +363,8 @@
 <script src="val-quota.js"></script>
 <script src="val-brain.js"></script>
 <script src="val-shim.js"></script>
+<script src="val-demo.js"></script>
+<script src="val-autodemo.js"></script>
 <script>
 /* ================== ESTADO ================== */
 const chat = document.getElementById('chat');
@@ -1008,6 +1010,26 @@ setInterval(()=>{
   if(!session || busy) return;
   if(!recording && !micBlocked){ scheduleNextListen(0); }
 }, 12000);
+
+    /* ===== CHIPS DE SUGERENCIA (referencia visual) ===== */
+    document.querySelectorAll('.chip').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const q = btn.dataset.q;
+        const inp = document.getElementById('textInput');
+        if(inp){ inp.value = q; inp.dispatchEvent(new Event('input',{bubbles:true})); }
+        window.ask(q);
+      });
+    });
+    // Ocultar chips después de la primera interacción
+    const _origAsk = window.ask;
+    window.ask = function(q){
+      const chips = document.getElementById('chips');
+      if(chips && !chips.dataset.hidden){
+        chips.style.display = 'none';
+        chips.dataset.hidden = '1';
+      }
+      return _origAsk.apply(this, arguments);
+    };
 </script>
 </body>
 </html>

@@ -1,0 +1,8 @@
+dia,apertura,cierre,activo
+Lunes,09:00,18:00,TRUE
+Martes,09:00,18:00,TRUE
+Miercoles,09:00,18:00,TRUE
+Jueves,09:00,18:00,TRUE
+Viernes,09:00,18:00,TRUE
+Sabado,09:00,14:00,TRUE
+Domingo,12:00,16:00,FALSE

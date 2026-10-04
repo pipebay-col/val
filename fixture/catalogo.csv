@@ -1,0 +1,7 @@
+id,categoria,nombre,descripcion,duracion_min,precio_cop,activo
+limp-facial-classic,limpieza,Limpieza Facial Profunda,Limpieza profunda con vapor, extracción suave y máscara según tu tipo de piel,50,180000,TRUE
+botox-frontal,estetica-avanzada,Botox Zona Frontal,Toxina para frente suave y descansada, efecto natural que dura 3 a 5 meses,30,950000,TRUE
+relleno-labios,estetica-avanzada,Relleno de Labios,Ácido hialurónico con volumen e hidratación natural, incluye control a los 15 días,45,850000,TRUE
+laser-full,laser,Láser Depilatorio Full,Reducción del 80 al 90 por ciento del vello en cuerpo completo, paquete de 6 sesiones,90,2400000,TRUE
+peeling-quimico,tratamiento,Peeling Químico,Renovación de piel para manchas y tono disparejo,40,320000,TRUE
+microdermo,tratamiento,Microdermoabrasión,Pulido de piel con diamante para textura y brillo inmediato,35,220000,TRUE
