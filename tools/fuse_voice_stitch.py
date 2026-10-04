@@ -104,10 +104,20 @@ adapter = """
 </script>
 """
 
+# 4b. Inyectar los modulos val-*.js ANTES del adapter (el shim intercepta /api/tts y /api/asr)
+modulos = """<script src="val-config.js"></script>
+<script src="val-sheet.js"></script>
+<script src="val-quota.js"></script>
+<script src="val-brain.js"></script>
+<script src="val-shim.js"></script>
+<script src="val-demo.js"></script>
+"""
+
 # 5. HTML final fusionado
 parts = []
 parts.append('<!DOCTYPE html>\n<html lang="es">\n<head>\n' + stitch_head + '\n</head>\n<body>\n')
 parts.append(stitch_body_clean)
+parts.append(modulos)
 parts.append(adapter)
 parts.append('<script>\n' + voice_core + '\n</script>\n</body>\n</html>')
 fused = '\n'.join(parts)
