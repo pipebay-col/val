@@ -15,6 +15,25 @@
   const sb = document.getElementById('startBtn');
   orbCore.style.cursor = 'pointer';
   orbCore.style.userSelect = 'none';
+  // Efecto táctil premium: transición suave + feedback al tocar
+  orbCore.style.transition = 'transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease, border-color .3s ease';
+  const press = ()=>{ orbCore.style.transform = 'scale(.92)'; };
+  const release = ()=>{
+    orbCore.style.transform = 'scale(1)';
+    // ripple al soltar
+    const rp = document.createElement('div');
+    const r0 = orbCore.getBoundingClientRect();
+    rp.style.cssText = 'position:fixed;left:'+(r0.left+r0.width/2-10)+'px;top:'+(r0.top+r0.height/2-10)+'px;width:20px;height:20px;border-radius:50%;border:2px solid rgba(78,222,163,.5);z-index:80;pointer-events:none;animation:valTapRip .6s ease-out forwards;';
+    const k = document.createElement('style');
+    k.textContent = '@keyframes valTapRip{0%{transform:scale(1);opacity:.9}100%{transform:scale(6);opacity:0}}';
+    document.head.appendChild(k);
+    document.body.appendChild(rp);
+    setTimeout(()=>rp.remove(), 650);
+  };
+  orbCore.addEventListener('touchstart', press, {passive:true});
+  orbCore.addEventListener('touchend', release, {passive:true});
+  orbCore.addEventListener('mousedown', press);
+  orbCore.addEventListener('mouseup', release);
   orbCore.addEventListener('click', function(){
     if (!window.session) {
       // abrir el MIC INMEDIATAMENTE (hablar durante la intro = barge-in natural)

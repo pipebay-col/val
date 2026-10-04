@@ -33,10 +33,19 @@
   core.appendChild(micWrap);
   const micSvg = document.getElementById('val-mic-svg');
 
-  /* 3. Colores del mic por estado */
+  /* 3. Colores del mic por estado + RE-OCULTAR decorativos en cada cambio
+        (el setVoiceState heredado del Stitch puede re-mostrarlos) */
   const prevSet = window.setVoiceState;
   window.setVoiceState = function (state) {
     try { prevSet && prevSet(state); } catch (_) {}
+    // re-ocultar decorativos que el estado anterior haya re-mostrado
+    core.querySelectorAll('div, span').forEach(function (el) {
+      if (el.tagName === 'CANVAS') return;
+      if (el.classList && el.classList.contains('val-mic-real')) return;
+      if (micWrap.contains(el)) return;
+      el.style.display = 'none';
+      el.style.visibility = 'hidden';
+    });
     if (!micSvg) return;
     const colors = { listening: '#10B981', thinking: '#F59E0B', speaking: '#38BDF8', idle: '#4edea3' };
     micSvg.style.color = colors[state] || colors.idle;

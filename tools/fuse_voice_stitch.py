@@ -146,6 +146,8 @@ _html = _html.replace('Val Concierge', 'Val — Asistente de Voz de AplicatiBox'
 _html = _html.replace('Val | Concierge Clínico', 'Val — Asistente de Voz de AplicatiBox')
 _html = _html.replace('Pídele a Vali:', 'Toca y pregúntame:')
 _html = _html.replace('Pídele a Val:', 'Toca y pregúntame:')
+# Eliminar la pill de botones demo de estados (Idle/Escuchando/Pensando/Hablando)
+_html = _re.sub(r'<div[^>]*>\s*<button[^>]*id="btn-state-idle"[\s\S]*?</div>\s*</div>', '<!-- botones demo eliminados -->', _html, count=1)
 _html = _html.replace('Val — Asesora de Voz', 'Val — Asistente de Voz de AplicatiBox')
 with _io.open(out, 'w', encoding='utf-8') as _f: _f.write(_html)
 
