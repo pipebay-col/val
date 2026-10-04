@@ -66,7 +66,7 @@
     // Planes del asistente (§6.3): cuando preguntan por el precio de Val/suscripción
     if (PLANES_RX.test(t)) {
       const txt = window.__valPlanesTxt ? window.__valPlanesTxt() : 'Starter 99, Pro 199 y Premium 349 dólares al mes.';
-      return { answer: `Con gusto. ${nombreAsesora} tiene tres planes: ${txt}. El plan Starter es el más popular para empezar. ¿Quieres que te ponga en contacto con un asesor para activarlo?`, action: null, args: {} };
+      return { answer: `Con gusto te cuento. Val es la asistente que atiende tu negocio por voz las 24 horas, y tiene tres planes: ${txt}. El plan Starter es con el que la mayoría empieza. ¿Quieres que un asesor te contacte para activarla en tu negocio?`, action: null, args: {} };
     }
 
     // Intención de agendar
@@ -93,7 +93,7 @@
       return { answer: `Tenemos varias opciones: ${lista.replace(/\n• /g, ', ')}. ¿Hay alguno que te llame la atención o te cuento más de alguno en particular?`, action: null, args: {} };
     }
     if (SALUDO_RX.test(t)) {
-      return { answer: `¡Hola, qué gusto! Soy ${nombreAsesora}, la asesora virtual de ${nombreClinica}. Estoy aquí para contarte sobre nuestros tratamientos, darte precios y agendarte tu cita cuando quieras. ¿Qué te gustaría saber?`, action: null, args: {} };
+      return { answer: `¡Hola, qué gusto! Soy ${nombreAsesora}, de ${nombreClinica}. Te cuento tratamientos, precios y te agendo tu cita cuando quieras. ¿En qué te ayudo?`, action: null, args: {} };
     }
 
     // §3.4 reformulado: no abre WhatsApp directo — pregunta primero qué necesita

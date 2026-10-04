@@ -1088,7 +1088,7 @@ document.getElementById('startBtn').onclick = async ()=>{
   try{ window.ValQuota && window.ValQuota.nuevaSesion(); }catch(_){} // Val: nueva conversación del banco (§6.1)
   addMsg('Vali · DermaLuxe — sesión iniciada', 'sys');
   updateBadge();
-  const saludo = '¡Hola, qué gusto! Soy Vali, la asesora virtual de DermaLuxe Estética. Te cuento los tratamientos, te doy precios y te agendo tu cita cuando quieras. Toca el círculo y háblame normal.';
+  const saludo = '¡Hola, qué gusto verte por DermaLuxe! Soy Val, tu asistente. Te cuento los tratamientos, te doy precios y te agendo tu cita cuando quieras. Toca el círculo y háblame normal.';
   setMode('thinking');
   fetch('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:saludo})}).catch(()=>{});
   await speak(saludo);
