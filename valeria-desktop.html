@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Val Concierge - AI Voice Assistant</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Inter Google Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-tint": "#4edea3",
+            "surface-variant": "#333537",
+            "tertiary-fixed-dim": "#bfc8ce",
+            "on-primary-container": "#00422b",
+            "inverse-primary": "#006c49",
+            "surface": "#121416",
+            "on-primary-fixed": "#002113",
+            "background": "#121416",
+            "tertiary-container": "#9ca4aa",
+            "surface-dim": "#121416",
+            "error-container": "#93000a",
+            "primary": "#4edea3",
+            "on-secondary": "#003825",
+            "secondary-fixed-dim": "#68dba9",
+            "secondary-fixed": "#85f8c4",
+            "on-surface-variant": "#bbcabf",
+            "on-background": "#e2e2e5",
+            "primary-fixed-dim": "#4edea3",
+            "on-secondary-fixed": "#002114",
+            "on-primary-fixed-variant": "#005236",
+            "secondary-container": "#25a475",
+            "on-surface": "#e2e2e5",
+            "inverse-surface": "#e2e2e5",
+            "error": "#ffb4ab",
+            "on-tertiary": "#293137",
+            "outline": "#86948a",
+            "outline-variant": "#3c4a42",
+            "on-error": "#690005",
+            "surface-container-high": "#282a2c",
+            "surface-container": "#1e2022",
+            "on-secondary-container": "#00311f",
+            "inverse-on-surface": "#2f3033",
+            "tertiary-fixed": "#dbe4ea",
+            "surface-container-low": "#1a1c1e",
+            "secondary": "#68dba9",
+            "on-tertiary-container": "#323a3f",
+            "on-secondary-fixed-variant": "#005137",
+            "surface-container-highest": "#333537",
+            "on-primary": "#003824",
+            "on-tertiary-fixed-variant": "#40484d",
+            "on-error-container": "#ffdad6",
+            "surface-container-lowest": "#0c0e10",
+            "on-tertiary-fixed": "#151d21",
+            "tertiary": "#bfc8ce",
+            "primary-fixed": "#6ffbbe",
+            "primary-container": "#10b981",
+            "surface-bright": "#38393c"
+          },
+          "borderRadius": {
+            "DEFAULT": "1rem",
+            "lg": "2rem",
+            "xl": "3rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-md": "1rem",
+            "margin-mobile": "1.25rem",
+            "space-sm": "0.5rem",
+            "space-xl": "2.5rem",
+            "space-lg": "1.5rem",
+            "gutter": "1.5rem",
+            "gutter-mobile": "1rem",
+            "margin": "2.5rem",
+            "space-xs": "0.25rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Inter"],
+            "headline-lg": ["Inter"],
+            "title-md": ["Inter"],
+            "body-md": ["Inter"],
+            "body-lg": ["Inter"],
+            "display-lg": ["Inter"],
+            "label-md": ["Inter"],
+            "headline-lg-mobile": ["Inter"],
+            "display-lg-mobile": ["Inter"],
+            "label-sm": ["Inter"]
+          },
+          "fontSize": {
+            "headline-md": ["22px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "400" }],
+            "title-md": ["18px", { "lineHeight": "26px", "letterSpacing": "-0.005em", "fontWeight": "500" }],
+            "body-md": ["14px", { "lineHeight": "22px", "letterSpacing": "0.005em", "fontWeight": "400" }],
+            "body-lg": ["16px", { "lineHeight": "26px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "300" }],
+            "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.06em", "fontWeight": "500" }],
+            "headline-lg-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.015em", "fontWeight": "400" }],
+            "display-lg-mobile": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.025em", "fontWeight": "300" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.08em", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Architectural Micro-grid (24px) */
+    .bg-micro-grid {
+      background-size: 24px 24px;
+      background-image: 
+        linear-gradient(to right, rgba(30, 38, 43, 0.45) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 38, 43, 0.45) 1px, transparent 1px);
+    }
+
+    /* Ambient dynamic glow */
+    .orb-glow-idle {
+      box-shadow: 0 0 45px -5px rgba(16, 185, 129, 0.22);
+    }
+    .orb-glow-listening {
+      box-shadow: 0 0 70px 10px rgba(16, 185, 129, 0.45), 0 0 110px 30px rgba(78, 222, 163, 0.2);
+    }
+    .orb-glow-thinking {
+      box-shadow: 0 0 60px 5px rgba(16, 185, 129, 0.35), inset 0 0 30px rgba(78, 222, 163, 0.2);
+    }
+    .orb-glow-speaking {
+      box-shadow: 0 0 90px 15px rgba(16, 185, 129, 0.55), inset 0 0 50px rgba(16, 185, 129, 0.3);
+    }
+
+    /* Waveform visualizer dynamics */
+    .waveform-bar {
+      transition: height 0.15s ease-in-out;
+      transform-origin: bottom;
+    }
+
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse-breathe {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.04); opacity: 1; }
+    }
+    .animate-spin-slow {
+      animation: spin-slow 16s linear infinite;
+    }
+    .animate-breathe {
+      animation: pulse-breathe 4s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased min-h-screen relative overflow-x-hidden selection:bg-primary-container selection:text-on-primary">
+<!-- Atmospheric Background Canvas -->
+<div class="fixed inset-0 bg-surface-container-lowest pointer-events-none"></div>
+<div class="fixed inset-0 bg-micro-grid pointer-events-none opacity-70"></div>
+<!-- Subtle Radial Emerald Auroras -->
+<div class="fixed top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] bg-primary/10 rounded-full blur-[140px] pointer-events-none"></div>
+<div class="fixed bottom-10 right-1/4 w-[450px] h-[450px] bg-secondary-container/10 rounded-full blur-[120px] pointer-events-none"></div>
+<!-- Primary Canvas Container -->
+<main class="relative z-10 max-w-[1360px] mx-auto min-h-screen px-margin flex flex-col justify-between py-space-lg">
+<!-- Top Status Control Bar -->
+<header class="w-full flex items-center justify-between pt-space-xs">
+<!-- Clinic Brand Anchor (Discreet Luxury) -->
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-full bg-surface-container-low border border-outline-variant/60 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="spa" data-weight="fill" style="font-variation-settings: 'FILL' 1;">spa</span>
+</div>
+<div>
+<span class="font-title-md text-title-md tracking-wider text-on-surface uppercase block font-semibold text-xs">VAL CONCIERGE</span>
+<span class="font-label-sm text-label-sm text-outline tracking-widest uppercase text-[10px] block">CLINICAL SUITE AI</span>
+</div>
+</div>
+<!-- State Pill Selector -->
+<nav class="flex items-center bg-surface-container-low/90 backdrop-blur-[24px] border border-outline-variant/50 rounded-full p-1.5 shadow-2xl">
+<button class="state-pill px-4 py-1.5 rounded-full font-label-md text-label-md transition-all duration-200 flex items-center gap-2 text-on-surface bg-surface-container-high border border-primary/40 shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)]" id="btn-idle" onclick="setState('idle')">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+          Idle
+        </button>
+<button class="state-pill px-4 py-1.5 rounded-full font-label-md text-label-md transition-all duration-200 flex items-center gap-2 text-on-surface-variant hover:text-on-surface" id="btn-listening" onclick="setState('listening')">
+<span class="w-2 h-2 rounded-full bg-outline"></span>
+          Escuchando
+        </button>
+<button class="state-pill px-4 py-1.5 rounded-full font-label-md text-label-md transition-all duration-200 flex items-center gap-2 text-on-surface-variant hover:text-on-surface" id="btn-thinking" onclick="setState('thinking')">
+<span class="w-2 h-2 rounded-full bg-outline"></span>
+          Pensando
+        </button>
+<button class="state-pill px-4 py-1.5 rounded-full font-label-md text-label-md transition-all duration-200 flex items-center gap-2 text-on-surface-variant hover:text-on-surface" id="btn-speaking" onclick="setState('speaking')">
+<span class="w-2 h-2 rounded-full bg-outline"></span>
+          Hablando
+        </button>
+</nav>
+<!-- Clinic Encryption & Presence Indicator -->
+<div class="flex items-center gap-space-sm bg-surface-container-low/60 border border-outline-variant/40 px-3.5 py-1.5 rounded-full backdrop-blur-md">
+<span class="material-symbols-outlined text-primary text-[16px]" data-icon="lock" data-weight="fill" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant tracking-wider uppercase text-[10px]">ENLACE CLÍNICO PRIVADO</span>
+</div>
+</header>
+<!-- Main Dynamic Desktop Stage: Balanced Hero & Suggestions -->
+<div class="grid grid-cols-12 gap-gutter items-center my-auto py-space-md">
+<!-- Left / Center-Left Hero Stage (Voice AI Core) -->
+<div class="col-span-12 lg:col-span-8 flex flex-col items-center justify-center text-center relative py-6">
+<!-- Voice Orb Chamber -->
+<div class="relative w-[340px] h-[340px] md:w-[380px] md:h-[380px] flex items-center justify-center mb-8">
+<!-- Outer Pulsing Rings -->
+<div class="absolute inset-0 rounded-full border border-outline-variant/30 scale-100 transition-all duration-700 pointer-events-none" id="orb-ring-outer"></div>
+<div class="absolute inset-6 rounded-full border border-primary/20 scale-100 transition-all duration-500 pointer-events-none" id="orb-ring-mid"></div>
+<!-- Rotating Dash Particle Ring (Active in Thinking) -->
+<div class="absolute inset-1 rounded-full border border-dashed border-primary/30 opacity-0 transition-opacity duration-500 pointer-events-none" id="orb-particle-ring"></div>
+<!-- Glass Concentric Disc Core -->
+<div class="relative w-56 h-56 md:w-64 md:h-64 rounded-full bg-surface-container-lowest/90 backdrop-blur-[28px] border border-outline-variant/80 flex flex-col items-center justify-center orb-glow-idle transition-all duration-700 animate-breathe cursor-pointer group" id="voice-core" onclick="toggleVoiceInput()">
+<!-- Ambient Internal Gradient Spherical Light -->
+<div class="absolute inset-2 rounded-full bg-gradient-to-tr from-surface-container-lowest via-surface-container-low to-primary/10 opacity-90"></div>
+<!-- Inner Glowing Emerald Rim -->
+<div class="absolute inset-0 rounded-full border border-primary/30 group-hover:border-primary/60 transition-colors duration-300"></div>
+<!-- Lotus / Botanical Botanical Icon Anchor -->
+<div class="relative z-10 flex flex-col items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[42px] transition-transform duration-500 group-hover:scale-110" data-icon="spa" data-weight="fill" style="font-variation-settings: 'FILL' 1;">spa</span>
+<!-- Real-time Audio Waveform Bars (Val Soundwave Signature) -->
+<div class="flex items-center gap-1.5 mt-3 h-8 px-4" id="visualizer-bars">
+<div class="waveform-bar w-[3px] h-2 bg-primary/80 rounded-full"></div>
+<div class="waveform-bar w-[3px] h-4 bg-primary rounded-full"></div>
+<div class="waveform-bar w-[3px] h-6 bg-primary rounded-full"></div>
+<div class="waveform-bar w-[3px] h-3 bg-primary/90 rounded-full"></div>
+<div class="waveform-bar w-[3px] h-7 bg-primary rounded-full"></div>
+<div class="waveform-bar w-[3px] h-4 bg-primary/70 rounded-full"></div>
+<div class="waveform-bar w-[3px] h-2 bg-primary/50 rounded-full"></div>
+</div>
+</div>
+<!-- Subtle Status Radial Label Inside Core -->
+<span class="relative z-10 mt-1 font-label-sm text-label-sm text-outline tracking-widest uppercase text-[10px]" id="core-status-text">EN ESPERA</span>
+</div>
+</div>
+<!-- Typography Headlines -->
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight font-medium mb-2">
+          Val Concierge
+        </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-lg mb-8 transition-colors duration-300" id="hero-subtitle">
+          Toca el micrófono o comienza a hablar con Val
+        </p>
+<!-- Floating Mic Button / Control FAB -->
+<div class="flex flex-col items-center gap-3">
+<button class="group relative w-20 h-20 rounded-full bg-surface-container-low border border-primary/40 flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_32px_-6px_rgba(16,185,129,0.35)] focus:outline-none" id="main-mic-fab" onclick="handleMicClick()">
+<!-- Pulsing Halo Aura -->
+<div class="absolute inset-0 rounded-full bg-primary/20 animate-ping opacity-25"></div>
+<!-- Inner ring glow -->
+<div class="absolute inset-1.5 rounded-full border border-primary/20 bg-surface-container-lowest/80 backdrop-blur-sm group-hover:border-primary/60 transition-colors"></div>
+<span class="material-symbols-outlined text-primary text-[34px] relative z-10 transition-transform group-hover:scale-110" data-icon="mic" data-weight="fill" id="fab-mic-icon" style="font-variation-settings: 'FILL' 1;">mic</span>
+</button>
+<span class="font-label-sm text-label-sm text-outline tracking-widest uppercase text-[11px] font-semibold mt-1">
+            CONTROL POR VOZ
+          </span>
+</div>
+</div>
+<!-- Right Floating Panel: Sugerencias Clínicas (Glassmorphic Bento Card) -->
+<aside class="col-span-12 lg:col-span-4 flex flex-col gap-space-md">
+<div class="backdrop-blur-[24px] bg-surface-container-low/75 border border-outline-variant/40 rounded-3xl p-6 shadow-2xl transition-all duration-300 hover:border-outline-variant/60">
+<!-- Header with Sparkle Icon & Collapsible Action -->
+<div class="flex items-center justify-between pb-4 border-b border-outline-variant/40 mb-5">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="auto_awesome" data-weight="fill" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<h2 class="font-title-md text-title-md text-on-surface font-semibold text-sm tracking-wide uppercase">
+                SUGERENCIAS CLÍNICAS
+              </h2>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1" onclick="togglePanel()" title="Minimizar panel">
+<span class="material-symbols-outlined text-[20px]" data-icon="unfold_less" id="collapse-icon">unfold_less</span>
+</button>
+</div>
+<!-- Interactive Suggestion Chips & Details -->
+<div class="space-y-4" id="suggestions-content">
+<p class="font-body-md text-body-md text-on-surface-variant text-xs">
+              Consultas formuladas con frecuencia para la sede médica:
+            </p>
+<!-- Pill Chips Grid -->
+<div class="flex flex-col gap-2.5">
+<!-- Chip 1: Precio botox -->
+<button class="w-full flex items-center justify-between px-4 py-3 rounded-full bg-surface-container-lowest/80 border border-outline-variant/50 hover:border-primary/80 hover:bg-surface-container-high transition-all duration-200 group text-left" onclick="triggerVoiceQuery('¿Cuál es el precio del tratamiento con toxina botulínica?')">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="payments">payments</span>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-white font-medium text-sm">Precio botox</span>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary text-[18px] transition-transform group-hover:translate-x-0.5" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<!-- Chip 2: Agendar cita -->
+<button class="w-full flex items-center justify-between px-4 py-3 rounded-full bg-surface-container-lowest/80 border border-outline-variant/50 hover:border-primary/80 hover:bg-surface-container-high transition-all duration-200 group text-left" onclick="triggerVoiceQuery('Quiero agendar una cita de valoración estética')">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="calendar_month">calendar_month</span>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-white font-medium text-sm">Agendar cita</span>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary text-[18px] transition-transform group-hover:translate-x-0.5" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<!-- Chip 3: Tratamientos -->
+<button class="w-full flex items-center justify-between px-4 py-3 rounded-full bg-surface-container-lowest/80 border border-outline-variant/50 hover:border-primary/80 hover:bg-surface-container-high transition-all duration-200 group text-left" onclick="triggerVoiceQuery('Muéstrame el catálogo completo de tratamientos')">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="medical_services">medical_services</span>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-white font-medium text-sm">Tratamientos</span>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary text-[18px] transition-transform group-hover:translate-x-0.5" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<!-- Chip 4: Horarios y Ubicación -->
+<button class="w-full flex items-center justify-between px-4 py-3 rounded-full bg-surface-container-lowest/80 border border-outline-variant/50 hover:border-primary/80 hover:bg-surface-container-high transition-all duration-200 group text-left" onclick="triggerVoiceQuery('¿Cuáles son los horarios de atención y la ubicación de la clínica?')">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="schedule">schedule</span>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-white font-medium text-sm">Horarios y Ubicación</span>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary text-[18px] transition-transform group-hover:translate-x-0.5" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Clinical Quick Topics / Trending in Aesthetic Medicine -->
+<div class="pt-4 border-t border-outline-variant/40 mt-4">
+<span class="font-label-sm text-label-sm text-outline tracking-wider uppercase text-[10px] block mb-2.5">
+                TEMAS CLÍNICOS RECURRENTES
+              </span>
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1.5 rounded-full bg-surface-container-high/60 border border-outline-variant/40 text-on-surface-variant hover:text-white hover:border-primary/60 text-xs font-label-md transition-colors" onclick="triggerVoiceQuery('Información sobre rellenos con Ácido hialurónico')">
+                  Ácido hialurónico
+                </button>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-high/60 border border-outline-variant/40 text-on-surface-variant hover:text-white hover:border-primary/60 text-xs font-label-md transition-colors" onclick="triggerVoiceQuery('Protocolos para Rejuvenecimiento facial')">
+                  Rejuvenecimiento facial
+                </button>
+<button class="px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 text-xs font-label-md transition-colors flex items-center gap-1" onclick="triggerVoiceQuery('¿Cómo agendo la Consulta de valoración sin costo?')">
+<span class="material-symbols-outlined text-[14px]" data-icon="verified">verified</span>
+                  Valoración sin costo
+                </button>
+</div>
+</div>
+<!-- Discreet Doctor on-duty status card -->
+<div class="p-3.5 rounded-2xl bg-surface-container-lowest/60 border border-outline-variant/30 flex items-center justify-between mt-2">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface font-semibold">Dra. Arispe &amp; Equipo</p>
+<p class="font-label-sm text-label-sm text-outline text-[10px]">Médicos especialistas disponibles</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline text-[18px]" data-icon="stethoscope">stethoscope</span>
+</div>
+</div>
+</div>
+</aside>
+</div>
+<!-- Desktop Minimal Clinical Footer -->
+<footer class="w-full flex items-center justify-between border-t border-outline-variant/30 pt-4 text-outline font-label-sm text-label-sm">
+<div class="flex items-center gap-4">
+<span>Val AI • Versión Clínica 4.2 Pro</span>
+<span class="inline-block w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary inline-block"></span>
+          Conexión Neural Segura
+        </span>
+</div>
+<div class="flex items-center gap-6">
+<a class="hover:text-primary transition-colors" href="#privacy">Discreción y Privacidad Médica</a>
+<a class="hover:text-primary transition-colors" href="#protocol">Protocolo Clínico</a>
+<span class="text-on-surface-variant font-medium">Dr. Val Aesthetic Network © 2025</span>
+</div>
+</footer>
+</main>
+<!-- Interactive State Engine & Micro-Interactions -->
+<script>
+    let currentState = 'idle';
+    let waveInterval = null;
+
+    const coreElement = document.getElementById('voice-core');
+    const ringOuter = document.getElementById('orb-ring-outer');
+    const ringMid = document.getElementById('orb-ring-mid');
+    const particleRing = document.getElementById('orb-particle-ring');
+    const statusText = document.getElementById('core-status-text');
+    const heroSubtitle = document.getElementById('hero-subtitle');
+    const fabMicIcon = document.getElementById('fab-mic-icon');
+    const bars = document.querySelectorAll('.waveform-bar');
+
+    const stateButtons = {
+      idle: document.getElementById('btn-idle'),
+      listening: document.getElementById('btn-listening'),
+      thinking: document.getElementById('btn-thinking'),
+      speaking: document.getElementById('btn-speaking')
+    };
+
+    function updatePills(activeState) {
+      Object.keys(stateButtons).forEach(state => {
+        const btn = stateButtons[state];
+        const dot = btn.querySelector('span');
+        if (state === activeState) {
+          btn.className = "state-pill px-4 py-1.5 rounded-full font-label-md text-label-md transition-all duration-200 flex items-center gap-2 text-on-surface bg-surface-container-high border border-primary/40 shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)]";
+          dot.className = "w-2 h-2 rounded-full bg-primary animate-pulse";
+        } else {
+          btn.className = "state-pill px-4 py-1.5 rounded-full font-label-md text-label-md transition-all duration-200 flex items-center gap-2 text-on-surface-variant hover:text-on-surface";
+          dot.className = "w-2 h-2 rounded-full bg-outline";
+        }
+      });
+    }
+
+    function animateWaveform(active) {
+      if (waveInterval) clearInterval(waveInterval);
+      if (!active) {
+        bars.forEach((b, idx) => {
+          b.style.height = `${[8, 16, 24, 12, 28, 16, 8][idx % 7]}px`;
+        });
+        return;
+      }
+      waveInterval = setInterval(() => {
+        bars.forEach(b => {
+          const rand = Math.floor(Math.random() * 26) + 4;
+          b.style.height = `${rand}px`;
+        });
+      }, 120);
+    }
+
+    function setState(state) {
+      currentState = state;
+      updatePills(state);
+
+      // Reset base classes
+      coreElement.classList.remove('orb-glow-idle', 'orb-glow-listening', 'orb-glow-thinking', 'orb-glow-speaking', 'animate-spin-slow', 'animate-breathe');
+      particleRing.classList.remove('animate-spin-slow');
+      particleRing.classList.add('opacity-0');
+      ringOuter.classList.remove('border-primary/60', 'scale-110');
+      ringMid.classList.remove('border-primary/80', 'scale-105');
+
+      if (state === 'idle') {
+        coreElement.classList.add('orb-glow-idle', 'animate-breathe');
+        statusText.innerText = "EN ESPERA";
+        statusText.className = "relative z-10 mt-1 font-label-sm text-label-sm text-outline tracking-widest uppercase text-[10px]";
+        heroSubtitle.innerText = "Toca el micrófono o comienza a hablar con Val";
+        heroSubtitle.className = "font-body-lg text-body-lg text-on-surface-variant max-w-lg mb-8";
+        fabMicIcon.innerText = "mic";
+        animateWaveform(false);
+      } 
+      else if (state === 'listening') {
+        coreElement.classList.add('orb-glow-listening');
+        ringOuter.classList.add('border-primary/60', 'scale-110');
+        ringMid.classList.add('border-primary/80', 'scale-105');
+        statusText.innerText = "ESCUCHANDO...";
+        statusText.className = "relative z-10 mt-1 font-label-sm text-label-sm text-primary tracking-widest uppercase text-[10px] font-semibold";
+        heroSubtitle.innerText = "Val te está escuchando con atención clínica...";
+        heroSubtitle.className = "font-body-lg text-body-lg text-primary max-w-lg mb-8";
+        fabMicIcon.innerText = "graphic_eq";
+        animateWaveform(true);
+      } 
+      else if (state === 'thinking') {
+        coreElement.classList.add('orb-glow-thinking');
+        particleRing.classList.remove('opacity-0');
+        particleRing.classList.add('animate-spin-slow');
+        statusText.innerText = "PENSANDO...";
+        statusText.className = "relative z-10 mt-1 font-label-sm text-label-sm text-secondary-fixed tracking-widest uppercase text-[10px]";
+        heroSubtitle.innerText = "Analizando historial y protocolos médicos óptimos...";
+        heroSubtitle.className = "font-body-lg text-body-lg text-on-surface max-w-lg mb-8";
+        fabMicIcon.innerText = "hourglass_top";
+        animateWaveform(false);
+      } 
+      else if (state === 'speaking') {
+        coreElement.classList.add('orb-glow-speaking', 'animate-breathe');
+        ringOuter.classList.add('border-primary/80', 'scale-105');
+        statusText.innerText = "VAL RESPONDE";
+        statusText.className = "relative z-10 mt-1 font-label-sm text-label-sm text-primary tracking-widest uppercase text-[10px] font-bold";
+        heroSubtitle.innerText = "«El tratamiento de botox es aplicado por especialistas con certificación internacional»";
+        heroSubtitle.className = "font-body-lg text-body-lg text-white max-w-lg mb-8 italic";
+        fabMicIcon.innerText = "volume_up";
+        animateWaveform(true);
+      }
+    }
+
+    function toggleVoiceInput() {
+      if (currentState === 'idle') {
+        setState('listening');
+      } else if (currentState === 'listening') {
+        setState('thinking');
+        setTimeout(() => setState('speaking'), 1800);
+      } else {
+        setState('idle');
+      }
+    }
+
+    function handleMicClick() {
+      toggleVoiceInput();
+    }
+
+    function triggerVoiceQuery(text) {
+      setState('thinking');
+      heroSubtitle.innerText = `«${text}»`;
+      heroSubtitle.className = "font-body-lg text-body-lg text-primary max-w-lg mb-8";
+      
+      setTimeout(() => {
+        setState('speaking');
+      }, 1500);
+    }
+
+    function togglePanel() {
+      const panelContent = document.getElementById('suggestions-content');
+      const icon = document.getElementById('collapse-icon');
+      if (panelContent.classList.contains('hidden')) {
+        panelContent.classList.remove('hidden');
+        icon.innerText = 'unfold_less';
+      } else {
+        panelContent.classList.add('hidden');
+        icon.innerText = 'unfold_more';
+      }
+    }
+
+    // Default initialization
+    setState('idle');
+  </script>
+</body></html>
