@@ -358,6 +358,11 @@
   <div class="dr-body" id="logBody"></div>
 </div>
 
+<script src="val-config.js"></script>
+<script src="val-sheet.js"></script>
+<script src="val-quota.js"></script>
+<script src="val-brain.js"></script>
+<script src="val-shim.js"></script>
 <script>
 /* ================== ESTADO ================== */
 const chat = document.getElementById('chat');
@@ -742,6 +747,23 @@ function addInvoiceCard(){
 
 /* ================== ACCIONES ================== */
 function doAction(name, args){
+  /* ===== Val v1.0: acciones del cerebro local (ValBrain §3) ===== */
+  if(name==='derivar'){
+    window.__valAbrirWa && window.__valAbrirWa('Hola, vengo de la página web y quiero hablar con un asesor humano, por favor.');
+    logEvent('🙋','Derivación a humano', 'Transferido por WhatsApp');
+    return {msg:'Listo, te abrí el WhatsApp de la clínica para que un asesor humano te atienda. ¿Algo más en lo que te sirva?'};
+  }
+  if(name==='confirmar_cita'){
+    window.__valAbrirWa && window.__valAbrirWa(args && args.mensaje);
+    logEvent('📅','Cita confirmada', 'Resumen enviado por WhatsApp');
+    addBookingCard('Confirmada — WhatsApp');
+    return {msg:'¡Tu cita quedó enviada! La clínica te confirma por WhatsApp enseguida.'};
+  }
+  if(name==='quota_exhausted'){
+    const u = args && args.url ? args.url : '#';
+    try{ window.open(u, '_blank'); }catch(_){}
+    return {msg:'Se agotó tu prueba gratuita. Activa Val Pro para uso ilimitado — te abrí la página de planes.'};
+  }
   const p = args && args.producto ? findProduct(args.producto) : null;
   if(name==='show_card' || name==='highlight_product'){
     if(p) addCard(p);
@@ -847,6 +869,7 @@ async function listen(){
     if(audioCtx){ audioCtx.close().catch(()=>{}); audioCtx=null; }
     const blob = new Blob(chunks, {type: mediaRecorder.mimeType||'audio/webm'});
     if(blob.size < 1300){ setMode('idle'); scheduleNextListen(400); return; } // toque accidental
+    try{ window.ValQuota && window.ValQuota.registrarVoz((Date.now()-startedAt)/1000); }catch(_){} // Val: banco de minutos (§6.1)
     transcribe(blob);
   };
   try{ mediaRecorder.start(); }
@@ -968,6 +991,7 @@ function quickAsk(q){
 document.getElementById('startBtn').onclick = async ()=>{
   document.getElementById('start').classList.add('hide');
   session = true;
+  try{ window.ValQuota && window.ValQuota.nuevaSesion(); }catch(_){} // Val: nueva conversación del banco (§6.1)
   addMsg('Vali · DermaLuxe — sesión iniciada', 'sys');
   updateBadge();
   const saludo = '¡Hola! Soy Vali, tu asesora de belleza de DermaLuxe. Pregúntame por tratamientos, precios o disponibilidad — o toca una sugerencia. Yo te escucho y contesto sola.';
