@@ -111,13 +111,19 @@ modulos = """<script src="val-config.js"></script>
 <script src="val-demo.js"></script>
 """
 
+# 4c. Parche de UX de voz (post-core): anti-eco, VAD móvil, saludo único, estados sincronizados
+patch_ref = """<script src="val-ux-patch.js"></script>
+"""
+
 # 5. HTML final fusionado
 parts = []
 parts.append('<!DOCTYPE html>\n<html lang="es">\n<head>\n' + stitch_head + '\n</head>\n<body>\n')
 parts.append(stitch_body_clean)
 parts.append(modulos)
 parts.append(adapter)
-parts.append('<script>\n' + voice_core + '\n</script>\n</body>\n</html>')
+parts.append('<script>\n' + voice_core + '\n</script>\n')
+parts.append(patch_ref)
+parts.append('</body>\n</html>')
 fused = '\n'.join(parts)
 
 out = r'C:\Users\Usuario\AppData\Local\hermes\val-repo\valeria.html'
