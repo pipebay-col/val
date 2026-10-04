@@ -41,6 +41,7 @@
   const SALUDO_RX = /^(hola|buenas|buenos dias|buenas tardes|buenas noches|hey|que mas|que tal)/;
   const PRECIO_RX = /(precio|precios|cuanto|cuanto vale|cuanto cuesta|valor|tarifa|tarifas)/;
   const SERVICIOS_RX = /(servicios|tratamientos|que tienen|que hacen|catalogo|menu|opciones)/;
+  const PLANES_RX = /(cuanto (cuesta|vale) (el|la|tu) (asistente|sistema|val|asesora|app|aplicacion)|planes|suscripcion|contratar (el|la|a) (asistente|sistema|val)|precio (del|de el|de la) (asistente|sistema|val)|mensualidad|licencia)/;
 
   // Estado de agenda en curso
   let agenda = null; // {nombre, servicio, fecha, hora, fase}
@@ -60,6 +61,12 @@
     // Flujo de agendamiento en curso (máquina de estados de 4 datos §3.3)
     if (agenda) {
       return flujoAgenda(texto, t);
+    }
+
+    // Planes del asistente (§6.3): cuando preguntan por el precio de Val/suscripción
+    if (PLANES_RX.test(t)) {
+      const txt = window.__valPlanesTxt ? window.__valPlanesTxt() : 'Starter 99, Pro 199 y Premium 349 dólares al mes.';
+      return { answer: `Con gusto. ${nombreAsesora} tiene tres planes: ${txt}. El plan Starter es el más popular para empezar. ¿Quieres que te ponga en contacto con un asesor para activarlo?`, action: null, args: {} };
     }
 
     // Intención de agendar

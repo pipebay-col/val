@@ -123,6 +123,7 @@ patch_ref = """<script src="val-ux-patch.js"></script>
 <script src="val-asr-continuo.js"></script>
 <script src="val-bargein.js"></script>
 <script src="val-orb-mic.js"></script>
+<script src="val-icons-fix.js"></script>
 <script src="val-waveform.js"></script>
 """
 
