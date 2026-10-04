@@ -42,6 +42,7 @@
   const PRECIO_RX = /(precio|precios|cuanto|cuanto vale|cuanto cuesta|valor|tarifa|tarifas)/;
   const SERVICIOS_RX = /(servicios|tratamientos|que tienen|que hacen|catalogo|menu|opciones)/;
   const PLANES_RX = /(cuanto (cuesta|vale) (el|la|tu) (asistente|sistema|val|asesora|app|aplicacion)|planes|suscripcion|contratar (el|la|a) (asistente|sistema|val)|precio (del|de el|de la) (asistente|sistema|val)|mensualidad|licencia)/;
+  const INSTALAR_RX = /(como (instalo|instalo|instal|descargo|obtengo|consigo|adquiero|puedo tener)|instalar|instalacion|descargar|donde (la|lo) (consigo|descargo|encuentro)|gratis|open source|codigo abierto|repositorio|github|quiero una|la quiero|me interesa (una|la)|funciona (para|en) (mi|otro|otros|diferentes)|sirve (para|en) (mi|otro|otros|diferentes)|que (tipos|tipo) de (negocios|empresas|clinicas)|para (que|quienes|que tipo) (sirve|sirven|es))/;
 
   // Estado de agenda en curso
   let agenda = null; // {nombre, servicio, fecha, hora, fase}
@@ -94,6 +95,15 @@
     }
     if (SALUDO_RX.test(t)) {
       return { answer: `¡Hola, qué gusto! Soy ${nombreAsesora}, de ${nombreClinica}. Te cuento tratamientos, precios y te agendo tu cita cuando quieras. ¿En qué te ayudo?`, action: null, args: {} };
+    }
+
+    // Instalación y multi-negocio: Val es producto de la agencia, instalable en cualquier negocio
+    if (INSTALAR_RX.test(t)) {
+      const tipoNeg = /(clinica|clinicas|estetica|spa|salon|barberia|consultorio|odontolog|medic|gimnasio|tienda|negocio|empresa)/.test(t);
+      if (tipoNeg) {
+        return { answer: '¡Claro! Val funciona para clínicas de estética, spas, salones, consultorios odontológicos, barberías y en general cualquier negocio que atienda clientes y agende citas. La instalamos con la información de TU negocio: tus servicios, tus precios y tu horario. ¿Quieres que un asesor de AplicatiBox te contacte para instalarla en el tuyo?', action: null, args: {} };
+      }
+      return { answer: 'Te cuento: Val es un proyecto abierto y gratuito — el código está disponible para todos. Si la quieres funcionando en tu negocio con tus servicios, tus precios y tu horario, la instalación la hace nuestro equipo de AplicatiBox. ¿Te paso con un asesor para dejarte la tuya lista?', action: null, args: {} };
     }
 
     // §3.4 reformulado: no abre WhatsApp directo — pregunta primero qué necesita
