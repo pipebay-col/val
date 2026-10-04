@@ -73,7 +73,8 @@
         if (m === 'listening') ss.textContent = 'Te escucho… habla normal';
         else if (m === 'thinking') ss.textContent = 'Consultando…';
         else if (m === 'speaking') ss.textContent = 'Val hablando…';
-        else if (window.session) ss.textContent = 'Toca el micrófono y háblame';
+        else if (window.session) ss.textContent = 'Escuchándote — pregúntame lo que quieras';
+        else ss.textContent = 'Toca el círculo para empezar';
       }
     } catch(_){}
   };

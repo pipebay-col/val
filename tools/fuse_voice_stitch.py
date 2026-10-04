@@ -67,19 +67,8 @@ adapter = """
     // Estado del voice core -> actualizar Stitch status-title/subtitle + orb
     const statusTitle = document.getElementById('status-title');
     const statusSubtitle = document.getElementById('status-subtitle');
-    const lastTitle = { t: '' };
-    const syncStatus = setInterval(function() {
-      if (window.statusEl && window.statusEl.textContent !== lastTitle.t) {
-        lastTitle.t = window.statusEl.textContent;
-        if (statusTitle) statusTitle.textContent = lastTitle.t;
-        // Mapear modo visual del voice core al orb de Stitch
-        const s = window.orbWrap ? (window.orbWrap.dataset.mode || window.orbWrap.className.match(/(idle|listening|thinking|speaking)/) || [])[0] : '';
-        if (s && window.setVoiceState) window.setVoiceState(s);
-      }
-      if (statusSubtitle && window.session) {
-        statusSubtitle.textContent = window.busy ? 'Consultando...' : 'Te escucho cada vez que hables';
-      }
-    }, 400);
+    // El texto de estado lo gestiona SOLO val-ux-patch (un único dueño — sin loop de parpadeo)
+    if (statusTitle) statusTitle.textContent = 'Val — Asesora de Voz';
     // Chips de Stitch -> prompts reales al cerebro
     const chipMap = {
       'Precio botox': 'Hola, ¿cuánto vale el botox de la frente?',
@@ -141,5 +130,19 @@ fused = '\n'.join(parts)
 out = r'C:\Users\Usuario\AppData\Local\hermes\val-repo\valeria.html'
 with open(out, 'w', encoding='utf-8') as f:
     f.write(fused)
+
+# 6. POST-PROCESOS PERMANENTES (idempotentes en cada regeneración)
+import re as _re, io as _io
+SALUDO_PRODUCTO = "¡Hola, qué gusto verte por DermaLuxe! Soy Val, tu asistente. Te cuento los tratamientos, te doy precios y te agendo tu cita cuando quieras. Toca el círculo y háblame normal."
+with _io.open(out, encoding='utf-8') as _f: _html = _f.read()
+# Saludo producto (reemplaza el del core viejo venga de donde venga)
+_m = _re.search(r"const saludo = '([^']+)'", _html)
+if _m and 'Soy Val, tu asistente' not in _m.group(1):
+    _html = _html.replace(_m.group(0), "const saludo = '" + SALUDO_PRODUCTO + "'", 1)
+# Textos de la demo DermaLuxe que confunden -> producto Val
+_html = _html.replace('SUGERENCIAS CLÍNICAS', 'Puedes preguntarme')
+_html = _html.replace('Sugerencias Clínicas', 'Puedes preguntarme')
+_html = _html.replace('Val Concierge', 'Val — Asesora de Voz')
+with _io.open(out, 'w', encoding='utf-8') as _f: _f.write(_html)
 
 print("FUSED OK:", len(fused), "chars ->", out)

@@ -12,6 +12,7 @@
 
 
 
+
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>Val | Concierge Clínico</title>
@@ -209,8 +210,11 @@
 
 
 
+
 </head>
 <body>
+
+
 
 
 
@@ -309,7 +313,7 @@
 <!-- Live Clinical Status Hierarchy -->
 <div class="mt-8 text-center px-4 max-w-xs transition-all duration-300">
 <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface tracking-tight mb-2" id="status-title">
-          Val Concierge
+          Val — Asesora de Voz
         </h2>
 <p class="font-body-md text-body-md text-on-surface-variant/80 transition-all duration-300" id="status-subtitle">
           Toca el micrófono para hablar con Val
@@ -331,7 +335,7 @@
 <div class="flex items-center justify-between pb-3 border-b border-outline-variant/30 mb-3">
 <div class="flex items-center space-x-2">
 <span class="material-symbols-outlined text-primary text-sm">auto_awesome</span>
-<span class="text-label-sm font-label-sm text-on-surface tracking-wider uppercase">Sugerencias Clínicas</span>
+<span class="text-label-sm font-label-sm text-on-surface tracking-wider uppercase">Puedes preguntarme</span>
 </div>
 <button class="text-on-surface-variant hover:text-on-surface transition-colors p-1" onclick="toggleBottomSheet()" title="Colapsar panel">
 <span class="material-symbols-outlined text-lg" id="collapse-icon">keyboard_arrow_down</span>
@@ -360,6 +364,7 @@
 </div>
 </div>
 <!-- INTERACTION LOGIC & VOICE ENGINE CONTROLLER -->
+
 
 
 
@@ -415,19 +420,8 @@
     // Estado del voice core -> actualizar Stitch status-title/subtitle + orb
     const statusTitle = document.getElementById('status-title');
     const statusSubtitle = document.getElementById('status-subtitle');
-    const lastTitle = { t: '' };
-    const syncStatus = setInterval(function() {
-      if (window.statusEl && window.statusEl.textContent !== lastTitle.t) {
-        lastTitle.t = window.statusEl.textContent;
-        if (statusTitle) statusTitle.textContent = lastTitle.t;
-        // Mapear modo visual del voice core al orb de Stitch
-        const s = window.orbWrap ? (window.orbWrap.dataset.mode || window.orbWrap.className.match(/(idle|listening|thinking|speaking)/) || [])[0] : '';
-        if (s && window.setVoiceState) window.setVoiceState(s);
-      }
-      if (statusSubtitle && window.session) {
-        statusSubtitle.textContent = window.busy ? 'Consultando...' : 'Te escucho cada vez que hables';
-      }
-    }, 400);
+    // El texto de estado lo gestiona SOLO val-ux-patch (un único dueño — sin loop de parpadeo)
+    if (statusTitle) statusTitle.textContent = 'Val — Asesora de Voz';
     // Chips de Stitch -> prompts reales al cerebro
     const chipMap = {
       'Precio botox': 'Hola, ¿cuánto vale el botox de la frente?',
