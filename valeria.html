@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Vali — Asesora de Belleza IA | DermaLuxe</title>
+<title>Val — Asesora de Belleza IA | AplicatiBox</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html, body { height:100%; overflow:hidden; }
@@ -286,8 +286,8 @@
     <div class="orb"></div>
     <div class="holo" id="holoStart"></div>
   </div>
-  <h1>Hola, soy <b>Vali</b></h1>
-  <p>Tu asesora de belleza IA de DermaLuxe. Solo <b>habla</b> — te escucho y contesto sola. Procesos, cuidados, precios y tu cita, de una.</p>
+  <h1>Hola, soy <b>Val</b></h1>
+  <p>La asistente de voz de AplicatiBox. Tu empresa atiende a sus clientes por voz las 24 horas: responde, informa y agenda.</p>
   <button class="start-btn" id="startBtn">✦ Empezar a conversar</button>
   <small>Se activa tu micrófono · conversación fluida, sin botones</small>
 </div>
@@ -296,7 +296,7 @@
 <div class="top">
   <div class="brand">
     <div class="brand-orb"></div>
-    <div><b>Vali</b><span>DermaLuxe · IA</span></div>
+    <div><b>Val</b><span>AplicatiBox · IA</span></div>
   </div>
   <div class="live-chip"><i></i> EN VIVO</div>
 </div>
@@ -506,7 +506,7 @@ function logEvent(ico, titulo, det){
       <div class="log-t">${l.t}</div>
     </div>`).join('');
 }
-logEvent('✦','Sesión iniciada','Holograma de Vali activo — lista para conversar');
+logEvent('✦','Sesión iniciada','Holograma de Val activo — lista para conversar');
 
 /* ================== DRAWERS ================== */
 const backdrop = document.getElementById('backdrop');
@@ -544,7 +544,7 @@ function renderCart(){
   const body = document.getElementById('cartBody');
   const n = cartCount();
   if(!n){
-    body.innerHTML = `<div class="cart-empty">Tu carrito está vacío 🌱<br><i>Pídele a Vali:</i> «muéstrame los tratamientos»</div>`;
+    body.innerHTML = `<div class="cart-empty">Tu carrito está vacío 🌱<br><i>Pregúntame:</i> «¿qué puede hacer Val?»</div>`;
     return;
   }
   const items = Object.entries(CART).map(([id,q])=>{
@@ -652,11 +652,11 @@ function downloadICS(){
   const f = x => `${x.getFullYear()}${pad(x.getMonth()+1)}${pad(x.getDate())}T${pad(x.getHours())}${pad(x.getMinutes())}00`;
   const ini = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, m||0);
   const fin = new Date(ini.getTime() + 45*60000);
-  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//DermaLuxe//Vali//ES','BEGIN:VEVENT',
+  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//AplicatiBox//Val//ES','BEGIN:VEVENT',
     'UID:' + Date.now() + '@dermaluxe', 'DTSTAMP:' + f(new Date()), 'DTSTART:' + f(ini), 'DTEND:' + f(fin),
-    'SUMMARY:DermaLuxe — Cita de valoración', 'LOCATION:DermaLuxe El Poblado, Medellín',
-    'DESCRIPTION:Cita agendada con Vali (IA). Llega 10 min antes.',
-    'BEGIN:VALARM','TRIGGER:-PT60M','ACTION:DISPLAY','DESCRIPTION:Tu cita en DermaLuxe es en 1 hora','END:VALARM',
+    'SUMMARY:AplicatiBox — Cita de valoración', 'LOCATION:AplicatiBox El Poblado, Medellín',
+    'DESCRIPTION:Cita agendada con Val (IA). Llega 10 min antes.',
+    'BEGIN:VALARM','TRIGGER:-PT60M','ACTION:DISPLAY','DESCRIPTION:Tu cita en AplicatiBox es en 1 hora','END:VALARM',
     'END:VEVENT','END:VCALENDAR'].join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([ics], {type:'text/calendar'}));
@@ -959,7 +959,7 @@ function setMode(m){
   orbWrap.dataset.mode = m;
   if(m==='listening'){ statusEl.innerHTML='<span class="wave"><i></i><i></i><i></i><i></i><i></i></span> Te escucho… habla normal'; }
   else if(m==='thinking'){ statusEl.textContent='Consultando…'; }
-  else if(m==='speaking'){ statusEl.textContent='Vali hablando…'; }
+  else if(m==='speaking'){ statusEl.textContent='Val hablando…'; }
   else if(session){ statusEl.textContent='Te escucho cada vez que hables · o escríbeme'; }
   else { statusEl.textContent='Toca ✦ para activar tu micrófono'; }
 }
@@ -1009,6 +1009,8 @@ setInterval(()=>{
   if(!recording && !micBlocked){ scheduleNextListen(0); }
 }, 12000);
 </script>
+<script src="val-voice.js?v=1"></script>
 <script src="val-skin.js?v=1"></script>
+<script src="val-minimal.js?v=1"></script>
 </body>
 </html>
