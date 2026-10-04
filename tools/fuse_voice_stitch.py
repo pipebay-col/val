@@ -34,20 +34,18 @@ adapter = """
     return el;
   }
   // chat: el voice core le agrega mensajes — lo creamos oculto (Stitch usa status-title)
-  ghost('chat', 'div');
-  // viz canvas: no existe en Stitch
-  ghost('viz', 'canvas');
-  // chips: Stitch usa chips-container — clonar con id 'chips' para el voice core
-  const stitchChips = document.getElementById('chips-container');
-  const chipsGhost = ghost('chips', 'div');
-  if (stitchChips) { chipsGhost.style.display = 'none'; }
-  // start: contenedor del boton empezar — en Stitch el main-fab hace de start
-  const fab = document.getElementById('main-fab');
-  const startGhost = ghost('start', 'div');
-  // startBtn: el voice core le asigna onclick — crear boton invisible que dispara lo mismo
-  const sb = ghost('startBtn', 'button');
-  // status: el voice core escribe en statusEl (id 'status') — crear espejo del status-title
-  const statusGhost = ghost('status', 'div');
+  // GHOSTS COMPLETOS: el voice core hace getElementById de 25 IDs al cargar.
+  // Si alguno es null, el script muere en la primera linea y NADA funciona.
+  // Creamos TODOS los que no existen en la UI Stitch.
+  var NEED = ['chat','viz','chips','start','startBtn','status','orbWrap',
+              'holoStart','holoDock','stars','backdrop',
+              'fabAgenda','drAgenda','agendaBody','fabCart','drCart','cartBody','cartBadge',
+              'fabLog','drLog','logBody','citaMsg','waNombre','waTel','textInput'];
+  NEED.forEach(function(id){ ghost(id, id==='viz'?'canvas':(id==='textInput'?'input':'div')); });
+  // Referencias reales de Stitch que el adapter usa mas abajo:
+  var fab = document.getElementById('main-fab');
+  var sb = document.getElementById('startBtn');
+  var stitchChips = document.getElementById('chips-container');
 
   // Tras cargar el voice core, enganchar el FAB y chips reales de Stitch:
   window.addEventListener('load', function() {
