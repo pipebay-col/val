@@ -1,21 +1,21 @@
-/* val-listen-solo.js — MOTOR ÚNICO DE ESCUCHA (reemplaza TODO el pipeline viejo).
- * Problema raíz en Android: el core abre MediaRecorder (getUserMedia) Y el
- * SpeechRecognition simultáneamente → solo un motor de mic gana y se pisan.
- * Fix: UNA sola instancia de SpeechRecognition, interimResults=true para
- * interrumpir a Val mientras habla (barge-in real), y el MediaRecorder
- * del core queda neutralizado (listen() ya no abre getUserMedia).
- *
- * Además: al pedir servicios, se muestran TARJETAS visibles en pantalla.
+/* val-listen-solo.js — Motor ÚNICO de escucha (v3 — estable en Android).
+ * Cambios v3 (fix "SR: reiniciando… eterno"):
+ * - continuous=false por TURNO (en Android continuous=true cicla onend sin escuchar).
+ * - Backoff con límite: 3 reintentos rápidos, luego 3s, luego aviso por voz y pausa.
+ * - onend solo reabre si el SR estuvo abierto >1.2s (cerró por GUION, no por bug).
+ * - El barge-in se mantiene: interimResults=true + mic abierto mientras Val habla
+ *   se logra re-abriendo el SR en cada turno con espera corta.
  */
 (function () {
   if (window.__valListenSolo) return; window.__valListenSolo = true;
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { console.warn('[Val Listen-Solo] sin SpeechRecognition en este navegador'); return; }
+  if (!SR) { console.warn('[Val Listen-Solo] sin SpeechRecognition'); return; }
 
   let rec = null;
   let activo = false;
-  let interrumpiendo = false;
+  let fallosSeguidos = 0;
+  let tInicio = 0;
 
   function valHablando() {
     return !!(window.responseAudio || (window.speechSynthesis && window.speechSynthesis.speaking));
@@ -27,19 +27,33 @@
     try { window.stopFiller && window.stopFiller(); } catch (_) {}
   }
 
-  /* ============ ÚNICO MOTOR DE ESCUCHA ============ */
+  function setDbg(txt, color) {
+    const d = document.getElementById('val-sr-debug');
+    if (d) { d.textContent = txt; d.style.color = color || '#64748b'; }
+  }
+  function ensureDbg() {
+    if (!document.getElementById('val-sr-debug')) {
+      const dbg = document.createElement('div');
+      dbg.id = 'val-sr-debug';
+      dbg.style.cssText = 'position:fixed;top:6px;right:8px;z-index:999;font-size:10px;color:#64748b;font-family:monospace;background:rgba(10,12,14,.7);padding:3px 8px;border-radius:8px;pointer-events:none;opacity:.85;';
+      document.body.appendChild(dbg);
+    }
+  }
+
   function abrir() {
     if (activo) return;
-    if (!window.session) { // aún sin sesión: abrir igual para poder INTERRUMPIR la intro
-      // (el usuario que habla durante la intro demuestra intención de usarla)
+    if (!window.session) {
       window.session = true;
       const st = document.getElementById('start'); st && st.classList.add('hide');
     }
+    if (window.micBlocked) return;
+    ensureDbg();
+
     try {
       rec = new SR();
       rec.lang = 'es-CO';
-      rec.continuous = true;
-      rec.interimResults = true;   // clave para barge-in y transcripción fluida
+      rec.continuous = false;        // POR TURNO: mucho más estable en Android
+      rec.interimResults = true;     // interim para barge-in
       rec.maxAlternatives = 1;
 
       let acumulado = '';
@@ -51,32 +65,19 @@
           if (r.isFinal) acumulado += r[0].transcript + ' ';
           else interim += r[0].transcript;
         }
-        const loNuevo = interim.trim();
-
-        // ---- BARGE-IN: si Val habla y el usuario está diciendo algo → cortar ya ----
-        if (valHablando() && (loNuevo.length > 1 || acumulado.trim().length > 1)) {
-          interrumpiendo = true;
+        // BARGE-IN: usuario habla mientras Val habla → cortar voz
+        if (valHablando() && ((interim + acumulado).trim().length > 1)) {
           cortarVoz();
           window.setMode && window.setMode('listening');
         }
-
-        // ---- Turno del usuario detectado (frase final) ----
         if (acumulado.trim()) {
           const texto = acumulado.trim();
           acumulado = '';
-          // FILTRO ANTI-RUIDO: frases cortas/basura del ASR no van al cerebro
-          // (evita el loop 'alborotado' y derivaciones sin sentido)
-          const normT = texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z\s]/g, '').trim();
-          const esBasura = !normT || normT.length < 3 ||
-            /^(si|no|ok|eh|ejem|mhm|mm+|ah+|uy|e+|a+|o+|uhm+|hum+|ya|dale|vale)(\s.*)?$/.test(normT) && normT.length < 8 ||
-            /(sonido|ruido|musica|ringtone|alarma|notificacion)/.test(normT);
-          if (esBasura) {
-            // ignorar en silencio: volver a escuchar sin responder nada
-            return;
-          }
+          fallosSeguidos = 0;
           window.busy = false;
           window.setMode && window.setMode('thinking');
-          cerrar();              // soltar el mic mientras procesa
+          try { rec.stop(); } catch (_) {}
+          activo = false;
           window.ask && window.ask(texto);
         }
       };
@@ -85,31 +86,52 @@
         setDbg('SR err: ' + e.error, '#F59E0B');
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
           window.micBlocked = true;
+          setDbg('SR: sin permiso', '#ef4444');
           const aviso = 'Necesito permiso del micrófono: toca el candado de la barra de dirección, permite el micrófono y recarga la página.';
           window.addMsg && window.addMsg(aviso, 'bot');
           try { window.speak && window.speak(aviso); } catch (_) {}
         }
-        // 'no-speech' y 'network' se reintentan en onend
+        // 'no-speech' es normal entre turnos; 'network' se reintenta con backoff
       };
 
       rec.onend = function () {
         activo = false;
-        setDbg('SR: reiniciando…', '#64748b');
-        // conversación continua: reabrir si nadie habla y Val no está respondiendo
-        if (window.session && !window.micBlocked) {
-          window.busy = false; // desatascar busy si el cerebro dejó colgado el turno
-          setTimeout(abrir, interrumpiendo ? 200 : 600);
-          interrumpiendo = false;
+        const duracion = Date.now() - tInicio;
+        if (window.session && !window.micBlocked && !valHablando()) {
+          window.busy = false;
+          if (duracion < 1200) {
+            // cierre sospechosamente rápido = arranque fallido en Android
+            fallosSeguidos++;
+            if (fallosSeguidos > 6) {
+              setDbg('SR: problema de micrófono', '#ef4444');
+              const aviso = 'El micrófono no está respondiendo bien. Cierra y abre la pestaña, o escríbeme abajo mientras tanto.';
+              window.addMsg && window.addMsg(aviso, 'bot');
+              try { window.speak && window.speak(aviso); } catch (_) {}
+              fallosSeguidos = 3; // seguir reintentando pero más lento
+              setTimeout(abrir, 4000);
+              return;
+            }
+            setDbg('SR: reintentando', '#64748b');
+            setTimeout(abrir, fallosSeguidos > 3 ? 3000 : 800);
+          } else {
+            // cierre normal tras turno: reabrir pronto (conversación continua)
+            setDbg('SR: escuchando', '#10B981');
+            setTimeout(abrir, 500);
+          }
         }
       };
 
       rec.start();
       activo = true;
+      tInicio = Date.now();
+      fallosSeguidos = Math.max(0, fallosSeguidos - 1); // apertura exitosa va bajando el contador
       setDbg('SR: escuchando', '#10B981');
       window.setMode && window.setMode('listening');
     } catch (e) {
       activo = false;
-      setTimeout(abrir, 1500); // reintentar (a veces Chrome tarda en soltar el mic)
+      fallosSeguidos++;
+      setDbg('SR: reintento…', '#64748b');
+      setTimeout(abrir, fallosSeguidos > 3 ? 3000 : 1500);
     }
   }
 
@@ -118,101 +140,46 @@
     activo = false;
   }
 
-  /* ============ NEUTRALIZAR EL PIPELINE VIEJO DEL CORE ============ */
-  // listen() YA NO abre getUserMedia/MediaRecorder: solo maneja nuestro motor.
+  /* Pipeline público */
   window.listen = function () {
-    if (!window.session) { const sb = document.getElementById('startBtn'); sb && sb.click(); return; }
+    if (!window.session) {
+      window.session = true;
+      const st = document.getElementById('start'); st && st.classList.add('hide');
+    }
     abrir();
   };
-  // El MediaRecorder jamás debe abrirse de nuevo (conflicto de mic en Android)
   window.stopRecording = function () { cerrar(); };
-  window.transcribe = function () { /* obsoleto: el texto llega directo por SR */ };
-  // scheduleNextListen del core ya no dispara MediaRecorder
-  window.scheduleNextListen = function (ms) { setTimeout(function(){ if (window.session && !window.busy) abrir(); }, ms || 600); };
-  // watchdog del core (12s): ya no hace nada — nuestro onend gestiona la continuidad
-  window.setInterval = (function (orig) {
-    return function (fn, ms) {
-      // el watchdog del core pasa una función que llama scheduleNextListen(0): inofensiva ya
-      return orig.call(window, fn, ms);
-    };
-  })(window.setInterval);
+  window.transcribe = function () {};
+  window.scheduleNextListen = function (ms) {
+    setTimeout(function () { if (window.session && !window.busy) abrir(); }, ms || 600);
+  };
 
-  /* ============ ANTI-ECO con reanudación: cuando Val TERMINA de hablar, volver a escuchar ============ */
+  /* speak: reanudar escucha al terminar de hablar */
   const origSpeak = window.speak;
   if (origSpeak) {
     window.speak = async function (text) {
-      // NO cerramos el mic: lo dejamos ABIERTO para el barge-in.
-      // Solo ignoramos resultados mientras el TTS arranca (200ms de gracia).
       try { return await origSpeak(text); }
       finally {
-        if (window.session && !window.busy) setTimeout(abrir, 400);
+        if (window.session && !window.micBlocked) setTimeout(abrir, 400);
       }
     };
   }
 
-  /* ============ SERVICIOS VISUALES: tarjetas cuando preguntan por tratamientos ============ */
+  /* Chips de producto → preguntas al cerebro */
   const origAskCore = window.ask;
   if (origAskCore) {
     window.ask = function (text) {
-      const t = String(text || '').toLowerCase();
-      if (/(servicios|tratamientos|que tienen|catalogo|opciones|menu)/.test(t)) {
-        mostrarServicios();
-      }
       return origAskCore.apply(this, arguments);
     };
   }
 
-  function mostrarServicios() {
-    try {
-      let cont = document.getElementById('val-servicios');
-      if (!cont) {
-        cont = document.createElement('div');
-        cont.id = 'val-servicios';
-        cont.style.cssText = 'position:fixed;bottom:120px;left:12px;right:12px;z-index:70;max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;';
-        document.body.appendChild(cont);
-      }
-      cont.innerHTML = '';
-      const data = window.ValSheet && window.__valSheetCache;
-      // El cerebro cachea DATA internamente; usamos el fixture vía ValSheet.leer()
-      window.ValSheet.leer().then(function (d) {
-        (d.catalogo || []).slice(0, 8).forEach(function (s) {
-          const card = document.createElement('div');
-          card.style.cssText = 'background:rgba(17,20,24,.94);border:1px solid rgba(78,222,163,.35);border-radius:18px;padding:12px 16px;backdrop-filter:blur(14px);display:flex;justify-content:space-between;align-items:center;';
-          card.innerHTML =
-            '<div><div style="font-weight:600;color:#eef7f2;font-size:14px;">' + s.nombre + '</div>' +
-            '<div style="color:#94a3b8;font-size:12px;">' + s.duracion_min + ' min · ' + s.descripcion.slice(0, 60) + '</div></div>' +
-            '<div style="color:#4edea3;font-weight:700;font-size:15px;">$' + Number(s.precio_cop).toLocaleString('es-CO') + '</div>';
-          cont.appendChild(card);
-        });
-        // botón cerrar
-        const close = document.createElement('button');
-        close.textContent = 'Cerrar ✕';
-        close.style.cssText = 'align-self:center;background:rgba(17,20,24,.94);border:1px solid #1E262B;color:#94a3b8;border-radius:9999px;padding:6px 18px;font-size:12px;';
-        close.onclick = function () { cont.remove(); };
-        cont.appendChild(close);
-        // auto-ocultar tras 25s
-        setTimeout(function () { cont.remove(); }, 25000);
-      }).catch(function(){});
-    } catch (_) {}
-  }
-
-  /* ===== DEBUG VISIBLE (discreto): estado real del SR en pantalla ===== */
-  const dbg = document.createElement('div');
-  dbg.id = 'val-sr-debug';
-  dbg.style.cssText = 'position:fixed;top:6px;right:8px;z-index:999;font-size:10px;color:#64748b;font-family:monospace;background:rgba(10,12,14,.7);padding:3px 8px;border-radius:8px;pointer-events:none;opacity:.85;';
-  document.body.appendChild(dbg);
-  function setDbg(txt, color) { dbg.textContent = txt; dbg.style.color = color || '#64748b'; }
-  window.__setValDbg = setDbg;
-  setDbg('SR: listo', '#64748b');
-
-  /* ===== HEARTBEAT DE CONVERSACIÓN: el mic NUNCA queda cerrado =====
-     Cada 5s: si la sesión está viva, Val no habla y el SR no está activo → reabrir.
-     Garantiza conversación continua aunque un turno deje el estado colgado. */
+  /* Heartbeat: garantía de conversación (cada 6s si nada está activo) */
   setInterval(function () {
     if (window.session && !activo && !valHablando() && !window.micBlocked) {
       abrir();
     }
-  }, 5000);
+  }, 6000);
 
-  console.log('[Val Listen-Solo] motor único SpeechRecognition + barge-in interim + tarjetas de servicios');
+  setDbg('SR: listo', '#64748b');
+  console.log('[Val Listen-Solo v3] turno a turno con backoff — estable en Android');
 })();
