@@ -42,6 +42,7 @@
   const PRECIO_RX = /(precio|precios|cuanto|cuanto vale|cuanto cuesta|valor|tarifa|tarifas)/;
   const SERVICIOS_RX = /(servicios|tratamientos|que tienen|que hacen|catalogo|menu|opciones)/;
   const PLANES_RX = /(cuanto (cuesta|vale) (el|la|tu) (asistente|sistema|val|asesora|app|aplicacion)|planes|suscripcion|contratar (el|la|a) (asistente|sistema|val)|precio (del|de el|de la) (asistente|sistema|val)|mensualidad|licencia)/;
+  const QUEHACE_RX = /(que puede hacer|que haces|que servicios ofrece|como funciona|para que sirves|que sabes hacer|funcionalidades|capacidades|como me ayudas)/;
   const INSTALAR_RX = /(como (instalo|instalo|instal|descargo|obtengo|consigo|adquiero|puedo tener)|instalar|instalacion|descargar|donde (la|lo) (consigo|descargo|encuentro)|gratis|open source|codigo abierto|repositorio|github|quiero una|la quiero|me interesa (una|la)|funciona (para|en) (mi|otro|otros|diferentes)|sirve (para|en) (mi|otro|otros|diferentes)|que (tipos|tipo) de (negocios|empresas|clinicas)|para (que|quienes|que tipo) (sirve|sirven|es))/;
 
   // Estado de agenda en curso
@@ -80,7 +81,7 @@
 
     const s = findServicio(t);
     if (s && PRECIO_RX.test(t)) {
-      return { answer: `El ${s.nombre} son ${fmt(s.precio_cop)} y dura ${s.duracion_min} min. ${s.descripcion} ¿Te cuento cómo es el proceso o prefieres que miremos disponibilidad para agendar?`, action: null, args: {} };
+      return { answer: `En este catálogo de ejemplo, ${s.nombre} son ${fmt(s.precio_cop)} y dura ${s.duracion_min} minutos. Así es como yo le daría la información de los servicios de TU empresa a tus clientes. ¿Quieres ver cómo agendo una cita, o te cuento cómo tenerme en tu negocio?`, action: null, args: {} };
     }
     if (s) {
       return { answer: `${s.nombre}: ${s.descripcion}. Dura ${s.duracion_min} minutos y su valor es ${fmt(s.precio_cop)}. ¿Quieres que te lo agende?`, action: null, args: {} };
@@ -94,7 +95,12 @@
       return { answer: `Tenemos varias opciones: ${lista.replace(/\n• /g, ', ')}. ¿Hay alguno que te llame la atención o te cuento más de alguno en particular?`, action: null, args: {} };
     }
     if (SALUDO_RX.test(t)) {
-      return { answer: '¡Hola! Soy Val, la asistente de voz de AplicatiBox. Estás viendo una demo con el catálogo de ejemplo de una clínica estética — pero Val se instala con los servicios de CUALQUIER negocio: clínicas, spas, salones, barberías. Pregúntame precios, tratamientos o pídeme una cita para ver cómo funciona.', action: null, args: {} };
+      return { answer: '¡Hola! Soy Val, la asistente de voz de AplicatiBox. Conmigo tu empresa atiende a sus clientes por voz las 24 horas: respondo preguntas, doy información y agendo citas. Estás en una demo con un catálogo de ejemplo — pregúntame algo o di agendar para ver cómo trabajo.', action: null, args: {} };
+    }
+
+    // ¿Qué puede hacer Val? → capacidades del producto para empresas
+    if (QUEHACE_RX.test(t)) {
+      return { answer: 'Conmigo, tu empresa atiende por voz las 24 horas: respondo preguntas de tus clientes, les doy precios e información de tus servicios, agendo citas y las paso a tu WhatsApp. No descansa, no olvida, y atiende a varios clientes a la vez. ¿Quieres ver cómo agendo una demo o prefieres que un asesor te contacte?', action: null, args: {} };
     }
 
     // Instalación y multi-negocio: Val es producto de la agencia, instalable en cualquier negocio

@@ -71,10 +71,10 @@ adapter = """
     if (statusTitle) statusTitle.textContent = 'Val — Asesora de Voz';
     // Chips de Stitch -> prompts reales al cerebro
     const chipMap = {
-      'Precio botox': 'Hola, ¿cuánto vale el botox de la frente?',
-      'Agendar cita': 'Quiero agendar una cita',
-      'Tratamientos': '¿Qué tratamientos tienen?',
-      'Horarios': 'Horarios y disponibilidad',
+      '¿Qué puede hacer Val?': 'qué puede hacer Val por mi empresa',
+      'Agendar una demo': 'quiero agendar una demo de Val',
+      'Servicios para mi empresa': 'qué servicios ofrece Val para mi empresa',
+      'Planes y precios': 'cuánto cuesta el asistente',
     };
     document.querySelectorAll('#chips-container .chip, #chips-container button').forEach(function(el) {
       var txt = (el.textContent || '').trim();
@@ -133,7 +133,7 @@ with open(out, 'w', encoding='utf-8') as f:
 
 # 6. POST-PROCESOS PERMANENTES (idempotentes en cada regeneración)
 import re as _re, io as _io
-SALUDO_PRODUCTO = "Hola! Soy Val, la asistente de voz de AplicatiBox. Esta es una demo de lo que Val puede hacer por tu negocio: te atiende por voz, te da precios y agenda citas. Prueba tocando el círculo y pregúntame algo."
+SALUDO_PRODUCTO = "Hola! Soy Val, la asistente de voz de AplicatiBox. Conmigo, tu empresa atiende a sus clientes por voz las 24 horas: respondo preguntas, doy información y agendo citas. Estás en una demo con un catálogo de ejemplo. Toca el círculo y pregúntame lo que quieras."
 with _io.open(out, encoding='utf-8') as _f: _html = _f.read()
 # CACHE-BUSTING: version en cada script val-*.js (mata el cache de Pages en el movil)
 import time as _time
@@ -151,6 +151,10 @@ _html = _html.replace('Val Concierge', 'Val — Asistente de Voz de AplicatiBox'
 _html = _html.replace('Val | Concierge Clínico', 'Val — Asistente de Voz de AplicatiBox')
 _html = _html.replace('Pídele a Vali:', 'Toca y pregúntame:')
 _html = _html.replace('Pídele a Val:', 'Toca y pregúntame:')
+_html = _html.replace('Precio botox', '¿Qué puede hacer Val?')
+_html = _html.replace('Agendar cita', 'Agendar una demo')
+_html = _html.replace('Tratamientos', 'Servicios para mi empresa')
+_html = _html.replace('Horarios', 'Planes y precios')
 # Eliminar la pill de botones demo de estados (Idle/Escuchando/Pensando/Hablando)
 _html = _re.sub(r'<div[^>]*>\s*<button[^>]*id="btn-state-idle"[\s\S]*?</div>\s*</div>', '<!-- botones demo eliminados -->', _html, count=1)
 _html = _html.replace('Val — Asesora de Voz', 'Val — Asistente de Voz de AplicatiBox')

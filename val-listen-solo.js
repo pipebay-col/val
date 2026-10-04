@@ -205,5 +205,14 @@
   window.__setValDbg = setDbg;
   setDbg('SR: listo', '#64748b');
 
+  /* ===== HEARTBEAT DE CONVERSACIÓN: el mic NUNCA queda cerrado =====
+     Cada 5s: si la sesión está viva, Val no habla y el SR no está activo → reabrir.
+     Garantiza conversación continua aunque un turno deje el estado colgado. */
+  setInterval(function () {
+    if (window.session && !activo && !valHablando() && !window.micBlocked) {
+      abrir();
+    }
+  }, 5000);
+
   console.log('[Val Listen-Solo] motor único SpeechRecognition + barge-in interim + tarjetas de servicios');
 })();

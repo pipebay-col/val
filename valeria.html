@@ -17,6 +17,7 @@
 
 
 
+
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>Val — Asistente de Voz de AplicatiBox</title>
@@ -219,8 +220,11 @@
 
 
 
+
 </head>
 <body>
+
+
 
 
 
@@ -345,21 +349,21 @@
 </div>
 <!-- Suggestion Pill Chips Grid -->
 <div class="flex flex-wrap gap-2 transition-all duration-300 max-h-40 overflow-hidden" id="chips-container">
-<button class="h-9 px-4 rounded-full glass-sheet border border-outline-variant/60 hover:border-primary text-body-md font-body-md text-on-surface hover:text-white transition-all duration-200 active:scale-95 flex items-center space-x-1.5 group" onclick="handleChipSelect('Precio botox')">
+<button class="h-9 px-4 rounded-full glass-sheet border border-outline-variant/60 hover:border-primary text-body-md font-body-md text-on-surface hover:text-white transition-all duration-200 active:scale-95 flex items-center space-x-1.5 group" onclick="handleChipSelect('¿Qué puede hacer Val?')">
 <span class="material-symbols-outlined text-xs text-primary group-hover:scale-110 transition-transform">payments</span>
-<span class="text-label-md font-label-md">Precio botox</span>
+<span class="text-label-md font-label-md">¿Qué puede hacer Val?</span>
 </button>
-<button class="h-9 px-4 rounded-full glass-sheet border border-outline-variant/60 hover:border-primary text-body-md font-body-md text-on-surface hover:text-white transition-all duration-200 active:scale-95 flex items-center space-x-1.5 group" onclick="handleChipSelect('Agendar cita')">
+<button class="h-9 px-4 rounded-full glass-sheet border border-outline-variant/60 hover:border-primary text-body-md font-body-md text-on-surface hover:text-white transition-all duration-200 active:scale-95 flex items-center space-x-1.5 group" onclick="handleChipSelect('Agendar una demo')">
 <span class="material-symbols-outlined text-xs text-primary group-hover:scale-110 transition-transform">calendar_month</span>
-<span class="text-label-md font-label-md">Agendar cita</span>
+<span class="text-label-md font-label-md">Agendar una demo</span>
 </button>
-<button class="h-9 px-4 rounded-full glass-sheet border border-outline-variant/60 hover:border-primary text-body-md font-body-md text-on-surface hover:text-white transition-all duration-200 active:scale-95 flex items-center space-x-1.5 group" onclick="handleChipSelect('Tratamientos')">
+<button class="h-9 px-4 rounded-full glass-sheet border border-outline-variant/60 hover:border-primary text-body-md font-body-md text-on-surface hover:text-white transition-all duration-200 active:scale-95 flex items-center space-x-1.5 group" onclick="handleChipSelect('Servicios para mi empresa')">
 <span class="material-symbols-outlined text-xs text-primary group-hover:scale-110 transition-transform">medical_services</span>
-<span class="text-label-md font-label-md">Tratamientos</span>
+<span class="text-label-md font-label-md">Servicios para mi empresa</span>
 </button>
-<button class="h-9 px-4 rounded-full glass-sheet border border-outline-variant/60 hover:border-primary text-body-md font-body-md text-on-surface hover:text-white transition-all duration-200 active:scale-95 flex items-center space-x-1.5 group" onclick="handleChipSelect('Horarios')">
+<button class="h-9 px-4 rounded-full glass-sheet border border-outline-variant/60 hover:border-primary text-body-md font-body-md text-on-surface hover:text-white transition-all duration-200 active:scale-95 flex items-center space-x-1.5 group" onclick="handleChipSelect('Planes y precios')">
 <span class="material-symbols-outlined text-xs text-primary group-hover:scale-110 transition-transform">schedule</span>
-<span class="text-label-md font-label-md">Horarios</span>
+<span class="text-label-md font-label-md">Planes y precios</span>
 </button>
 </div>
 </div>
@@ -386,6 +390,15 @@
 <script src="val-brain.js?v=1791144088"></script>
 <script src="val-shim.js?v=1791144088"></script>
 <script src="val-demo.js?v=1791144088"></script>
+
+
+
+<script src="val-config.js?v=1791145685"></script>
+<script src="val-sheet.js?v=1791145685"></script>
+<script src="val-quota.js?v=1791145685"></script>
+<script src="val-brain.js?v=1791145685"></script>
+<script src="val-shim.js?v=1791145685"></script>
+<script src="val-demo.js?v=1791145685"></script>
 
 
 <script>
@@ -430,10 +443,10 @@
     if (statusTitle) statusTitle.textContent = 'Val — Asistente de Voz de AplicatiBox';
     // Chips de Stitch -> prompts reales al cerebro
     const chipMap = {
-      'Precio botox': 'Hola, ¿cuánto vale el botox de la frente?',
-      'Agendar cita': 'Quiero agendar una cita',
-      'Tratamientos': '¿Qué tratamientos tienen?',
-      'Horarios': 'Horarios y disponibilidad',
+      '¿Qué puede hacer Val?': 'qué puede hacer Val por mi empresa',
+      'Agendar una demo': 'quiero agendar una demo de Val',
+      'Servicios para mi empresa': 'qué servicios ofrece Val para mi empresa',
+      'Planes y precios': 'cuánto cuesta el asistente',
     };
     document.querySelectorAll('#chips-container .chip, #chips-container button').forEach(function(el) {
       var txt = (el.textContent || '').trim();
@@ -1088,7 +1101,7 @@ document.getElementById('startBtn').onclick = async ()=>{
   try{ window.ValQuota && window.ValQuota.nuevaSesion(); }catch(_){} // Val: nueva conversación del banco (§6.1)
   addMsg('Vali · DermaLuxe — sesión iniciada', 'sys');
   updateBadge();
-  const saludo = 'Hola! Soy Val, la asistente de voz de AplicatiBox. Esta es una demo de lo que Val puede hacer por tu negocio: te atiende por voz, te da precios y agenda citas. Prueba tocando el círculo y pregúntame algo.';
+  const saludo = 'Hola! Soy Val, la asistente de voz de AplicatiBox. Conmigo, tu empresa atiende a sus clientes por voz las 24 horas: respondo preguntas, doy información y agendo citas. Estás en una demo con un catálogo de ejemplo. Toca el círculo y pregúntame lo que quieras.';
   setMode('thinking');
   fetch('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:saludo})}).catch(()=>{});
   await speak(saludo);
@@ -1105,12 +1118,12 @@ setInterval(()=>{
 
 </script>
 
-<script src="val-ux-patch.js?v=1791144088"></script>
-<script src="val-asr-continuo.js?v=1791144088"></script>
-<script src="val-listen-solo.js?v=1791144088"></script>
-<script src="val-orb-mic.js?v=1791144088"></script>
-<script src="val-icons-fix.js?v=1791144088"></script>
-<script src="val-waveform.js?v=1791144088"></script>
+<script src="val-ux-patch.js?v=1791145685"></script>
+<script src="val-asr-continuo.js?v=1791145685"></script>
+<script src="val-listen-solo.js?v=1791145685"></script>
+<script src="val-orb-mic.js?v=1791145685"></script>
+<script src="val-icons-fix.js?v=1791145685"></script>
+<script src="val-waveform.js?v=1791145685"></script>
 
 </body>
 </html>
