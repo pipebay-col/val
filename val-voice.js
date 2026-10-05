@@ -31,13 +31,25 @@
   }
 
   /* 1. getUserMedia de fondo: mic abierto SIEMPRE (estabilizador de Android) */
-  // SIN getUserMedia propio: el core YA abre el mic en listen().
-  // El SR corre en paralelo sobre el MISMO permiso (Chrome lo permite y es estable).
+  // Esperar el stream del core; si el core no lo abre en 5s, abrir el propio (fallback único).
+  let propioStream = null;
   async function abrirFondo() {
-    // solo esperar a que el core tenga su stream vivo
     let intentos = 0;
     while (!window.stream && intentos++ < 20) await new Promise(r => setTimeout(r, 250));
-    console.log('[Val Voice] stream del core ' + (window.stream ? 'activo' : 'NO disponible'));
+    if (!window.stream) {
+      try {
+        propioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        window.stream = propioStream; // el SR y el VAD del core usan este
+        console.log('[Val Voice] stream PROPIO abierto (fallback)');
+      } catch (e) {
+        window.micBlocked = true;
+        setDbg('mic sin permiso', '#ef4444');
+        return false;
+      }
+    } else {
+      console.log('[Val Voice] stream del core activo');
+    }
+    return true;
   }
 
   /* 2. SpeechRecognition como fuente de texto */
@@ -134,7 +146,7 @@
   const origOnclick = sb && sb.onclick;
   if (sb && origOnclick) {
     sb.onclick = async function () {
-      abrirFondo().then(abrir);
+      abrirFondo().then(function(ok){ if (ok) abrir(); });
       return origOnclick.apply(this, arguments);
     };
   }
