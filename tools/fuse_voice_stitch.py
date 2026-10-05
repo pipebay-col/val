@@ -133,7 +133,7 @@ with open(out, 'w', encoding='utf-8') as f:
 
 # 6. POST-PROCESOS PERMANENTES (idempotentes en cada regeneración)
 import re as _re, io as _io
-SALUDO_PRODUCTO = "Hola! Soy Val, la asistente de voz de AplicatiBox. Conmigo, tu empresa atiende a sus clientes por voz las 24 horas: respondo preguntas, doy información y agendo citas. Estás en una demo con un catálogo de ejemplo. Toca el círculo y pregúntame lo que quieras."
+SALUDO_PRODUCTO = "Hola! Soy Val, la asistente de voz de AplicatiBox. Conmigo, tu empresa responde a sus clientes por voz a toda hora: información, precios y reservas. Toca el círculo y pregúntame algo."
 with _io.open(out, encoding='utf-8') as _f: _html = _f.read()
 # CACHE-BUSTING: version en cada script val-*.js (mata el cache de Pages en el movil)
 import time as _time

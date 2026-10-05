@@ -51,8 +51,10 @@
       rec.maxAlternatives = 1;
 
       let acumulado = '';
+      let ciegoHasta = 0; // ventana ciega: descarta eco del altavoz tras reanudar
 
       rec.onresult = function (e) {
+        if (Date.now() < ciegoHasta) { acumulado = ''; return; }
         let interim = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const r = e.results[i];
@@ -112,6 +114,7 @@
       rec.start();
       activo = true;
       t0 = Date.now();
+      ciegoHasta = Date.now() + 2000; // sordera protectora 2s (eco del altavoz muere aquí)
       if (fallos > 0) fallos--;
       setDbg('SR: escuchando', '#10B981');
       window.setMode && window.setMode('listening');
@@ -142,7 +145,7 @@
     window.speak = async function (text) {
       if (rec && activo) { try { rec.stop(); } catch (_) {} activo = false; setDbg('SR: pausa (Val hablando)', '#64748b'); }
       try { return await origSpeak(text); }
-      finally { setTimeout(function(){ if (window.session && !window.micBlocked) abrir(); }, 500); }
+      finally { setTimeout(function(){ if (window.session && !window.micBlocked) abrir(); }, 1200); }
     };
   }
   /* Heartbeat de seguridad cada 6s (solo si Val NO habla) */

@@ -994,7 +994,7 @@ document.getElementById('startBtn').onclick = async ()=>{
   try{ window.ValQuota && window.ValQuota.nuevaSesion(); }catch(_){} // Val: nueva conversación del banco (§6.1)
   addMsg('Val · AplicatiBox — sesión iniciada', 'sys');
   updateBadge();
-  const saludo = 'Hola! Soy Val, la asistente de voz de AplicatiBox. Conmigo, tu empresa atiende a sus clientes por voz las 24 horas: respondo preguntas, doy información y agendo citas. Toca el círculo y pregúntame algo.';
+  const saludo = 'Hola! Soy Val, la asistente de voz de AplicatiBox. Conmigo, tu empresa responde a sus clientes por voz a toda hora: información, precios y reservas. Toca el círculo y pregúntame algo.';
   setMode('thinking');
   fetch('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:saludo})}).catch(()=>{});
   await speak(saludo);
@@ -1009,7 +1009,7 @@ setInterval(()=>{
   if(!recording && !micBlocked){ scheduleNextListen(0); }
 }, 12000);
 </script>
-<script src="val-voice.js?v=1791160112"></script>
+<script src="val-voice.js?v=1791160648"></script>
 <script src="val-skin.js?v=1791159631"></script>
 <script src="val-minimal.js?v=1791159631"></script>
 </body>
