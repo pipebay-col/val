@@ -25,3 +25,9 @@ Regla §0.1: todo cambio de alcance, stack o precio se documenta aquí ANTES de 
   - `/api/bookings` → genera link `wa.me` prellenado con los 4 datos (§3.3) y marca el uso.
 - **Motivo:** §5 fija Web Speech API como voz y prohíbe base de datos/panel/API WhatsApp en v1.0; el demo dependía de 4 rutas del dashboard Next (tts/asr/voice-assistant/bookings con edge-tts y LLM Python) que no existen en una instalación self-hosted desde GitHub. Documentado según §0.1 antes de ejecutar.
 - **Regla respetada:** §5 "Frontend: valeria.html adaptado. No reescribir" — los parches son aditivos (override de `fetch` + inyección de módulos), el núcleo visual/orb/agenda del demo queda intacto.
+
+## D-005 · 5-oct-2026 · Backend, IA y pagos para v2.0 (arquitectura documentada, pendiente de ejecución)
+- **Decisión:** v2.0 agrega un Worker Cloudflare `/api/chat` con LLM Groq (free tier) y fallback en cadena a ValBrain determinista; pagos con Stripe Payment Links; quota server-side en KV. El Sheet sigue como única fuente de verdad; el contrato cliente `{answer, action, args}` queda intacto. Detalle completo en `docs/arquitectura-v2.md`.
+- **Motivo:** paso 2 del plan de producción (repo público + arquitectura IA/pagos) requiere IA real y monetización, con costo fijo $0 y sin romper lo que funciona (§5: no reescribir el demo).
+- **Alternativas descartadas:** Next API routes (hosting Node = costo fijo); OpenAI (sin free tier útil para chat); Supabase (base de datos fuera de alcance v2.0).
+- **Licencia:** se agrega `LICENSE` (AGPL-3.0) al repo — ya declarada en README y §0 del documento maestro, faltaba el archivo físico.
