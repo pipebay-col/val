@@ -329,6 +329,7 @@ function abrir() {
     rec.maxAlternatives = 1;
 
     let acumulado = '';
+    let debounceTimer = null;
 
     rec.onresult = function (e) {
       let interim = '';
@@ -346,14 +347,24 @@ function abrir() {
       const dicho = (interim + ' ' + acumulado).trim();
       // doble protección: si aún es eco de la última frase, descartar
       if (dicho.length > 2 && esEcoDeVal(dicho)) { acumulado = ''; return; }
-      if (acumulado.trim()) {
-        const texto = acumulado.trim();
-        acumulado = '';
-        // filtro anti-ruido
-        const nrm = texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z\s]/g,'').trim();
-        if (!nrm || nrm.length < 3) return;
-        cerrar();
-        responder(texto);
+      // ==== DEBOUNCE DE FRASE COMPLETA ====
+      // Chrome Android emite isFinal en cada micro-pausa (aunque sigas hablando).
+      // Antes: la primera palabra finalizada se disparaba como pregunta completa
+      // ("hagamos" se enviaba solo). Ahora: cada texto nuevo REINICIA un reloj de
+      // 1.1s; solo cuando pasas 1.1s sin hablar se procesa TODO lo dicho.
+      if (debounceTimer) clearTimeout(debounceTimer);
+      const listoParaProcesar = acumulado.trim();
+      if (listoParaProcesar) {
+        debounceTimer = setTimeout(function () {
+          const texto = acumulado.trim();
+          acumulado = '';
+          debounceTimer = null;
+          // filtro anti-ruido
+          const nrm = texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z\s]/g,'').trim();
+          if (!nrm || nrm.length < 3) return;
+          cerrar();
+          responder(texto);
+        }, 1100);
       }
     };
 
