@@ -59,12 +59,10 @@
           if (r.isFinal) acumulado += r[0].transcript + ' ';
           else interim += r[0].transcript;
         }
-        // barge-in: si Val habla y el usuario habla → cortarla
-        if (valHablando() && ((interim + acumulado).trim().length > 1)) {
-          try { if (window.responseAudio) { window.responseAudio.pause(); window.responseAudio = null; } } catch (_) {}
-          try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (_) {}
-          window.setMode && window.setMode('listening');
-        }
+        // ANTI-ECO ESTRICTO: nada de lo que "se escucha" mientras Val habla se procesa
+        // (el altavoz del teléfono alimenta el mic y generaba órdenes fantasma).
+        // Para interrumpir a Val: tocar el círculo.
+        if (valHablando()) { acumulado = ''; return; }
         if (acumulado.trim()) {
           const texto = acumulado.trim();
           acumulado = '';
@@ -138,8 +136,16 @@
     };
   }
 
-  /* Reanudar tras cada respuesta: cuando speak() termina, el SR sigue (continuous).
-     Heartbeat de seguridad cada 6s */
+  /* ANTI-ECO con speak(): cerrar SR mientras Val habla, reanudar 500ms después */
+  const origSpeak = window.speak;
+  if (origSpeak) {
+    window.speak = async function (text) {
+      if (rec && activo) { try { rec.stop(); } catch (_) {} activo = false; setDbg('SR: pausa (Val hablando)', '#64748b'); }
+      try { return await origSpeak(text); }
+      finally { setTimeout(function(){ if (window.session && !window.micBlocked) abrir(); }, 500); }
+    };
+  }
+  /* Heartbeat de seguridad cada 6s (solo si Val NO habla) */
   setInterval(function () {
     if (window.session && !activo && !window.micBlocked && !valHablando()) abrir();
   }, 6000);
