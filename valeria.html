@@ -172,9 +172,31 @@ function addMsg(texto, quien) {
   chat.scrollTop = chat.scrollHeight;
 }
 
+/* ---------- CANCELACIÓN DE ECO ---------- */
+let ultimaFraseVal = '';   // lo último que Val dijo (para detectar eco)
+function esEcoDeVal(dicho) {
+  if (!ultimaFraseVal) return false;
+  const nrm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(Boolean);
+  const wVal = nrm(ultimaFraseVal);
+  const wDicho = nrm(dicho);
+  if (!wDicho.length) return true;
+  // ¿cuántas palabras de lo dicho están en la frase de Val?
+  let dentro = 0;
+  for (const w of wDicho) { if (w.length > 3 && wVal.includes(w)) dentro++; }
+  const ratio = dentro / wDicho.length;
+  // si >=60% de las palabras provienen del mensaje de Val → eco
+  if (ratio >= 0.6) return true;
+  // coincidencia literal por trozos (el eco suele ser un fragmento contiguo)
+  const tVal = wVal.join(' ');
+  const tDic = wDicho.join(' ');
+  if (tDic.length > 8 && tVal.includes(tDic)) return true;
+  return false;
+}
+
 /* ---------- TTS ---------- */
 async function hablar(texto) {
   valHablandoFlag = true;
+  ultimaFraseVal = texto; // registrar para el detector de eco
   modo('speaking');
   addMsg(texto, 'bot');
   // el mic sigue ABIERTO (escucha paralela) para el barge-in por voz
@@ -314,13 +336,21 @@ function abrir() {
         if (r.isFinal) acumulado += r[0].transcript + ' ';
         else interim += r[0].transcript;
       }
-      // ==== BARGE-IN POR VOZ: si Val habla y el usuario habla → cortarla YA ====
-      if (valHablandoFlag && (interim + acumulado).trim().length > 2) {
-        try { speechSynthesis.cancel(); } catch (_) {}
-        valHablandoFlag = false;
-        acumulado = ''; // lo que se oiga ahora es la interrupción; que siga escuchando
-        modo('listening');
-        return; // el usuario sigue hablando: onresult seguirá llegando
+      // ==== BARGE-IN POR VOZ con CANCELACIÓN DE ECO ====
+      // El altavoz de Android mete la propia voz de Val al mic (eco) y esa
+      // transcripción matchea las RX y genera el loop infinito. Detectamos si lo
+      // transcrito proviene del último mensaje de Val (eco) y lo descartamos.
+      const dicho = (interim + ' ' + acumulado).trim();
+      if (dicho.length > 2) {
+        const esEco = esEcoDeVal(dicho);
+        if (esEco) { acumulado = ''; return; } // eco del altavoz: ignorar
+        if (valHablandoFlag) {
+          // voz REAL del usuario mientras Val habla → BARGE-IN
+          try { speechSynthesis.cancel(); } catch (_) {}
+          valHablandoFlag = false;
+          modo('listening');
+          // NO descartar: dejar que la frase se complete y se procese
+        }
       }
       if (Date.now() < ciegoHasta) { acumulado = ''; return; } // ventana ciega solo al (re)iniciar
       if (acumulado.trim()) {
