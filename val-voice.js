@@ -31,17 +31,13 @@
   }
 
   /* 1. getUserMedia de fondo: mic abierto SIEMPRE (estabilizador de Android) */
-  let fondoStream = null;
+  // SIN getUserMedia propio: el core YA abre el mic en listen().
+  // El SR corre en paralelo sobre el MISMO permiso (Chrome lo permite y es estable).
   async function abrirFondo() {
-    try {
-      if (fondoStream) return;
-      fondoStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // analyser para el waveform del core (si existe el canvas del core)
-      console.log('[Val Voice] mic de fondo abierto — SR estabilizado');
-    } catch (e) {
-      window.micBlocked = true;
-      setDbg('mic sin permiso', '#ef4444');
-    }
+    // solo esperar a que el core tenga su stream vivo
+    let intentos = 0;
+    while (!window.stream && intentos++ < 20) await new Promise(r => setTimeout(r, 250));
+    console.log('[Val Voice] stream del core ' + (window.stream ? 'activo' : 'NO disponible'));
   }
 
   /* 2. SpeechRecognition como fuente de texto */
@@ -82,11 +78,20 @@
         }
       };
 
+      let errCaptureAvisado = false;
       rec.onerror = function (e) {
         setDbg('err: ' + e.error, '#F59E0B');
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
           window.micBlocked = true;
           setDbg('sin permiso de mic', '#ef4444');
+          const aviso = 'Necesito permiso del micrófono. Toca el candado en la barra de dirección, permite el micrófono y recarga.';
+          window.addMsg && window.addMsg(aviso, 'bot');
+          try { window.speak && window.speak(aviso); } catch (_) {}
+        } else if (e.error === 'audio-capture' && !errCaptureAvisado) {
+          errCaptureAvisado = true;
+          const aviso = 'No me está llegando el micrófono. Puede estar ocupado por otra app — ciérrala, o usa la barra de texto abajo mientras vuelve.';
+          window.addMsg && window.addMsg(aviso, 'bot');
+          setDbg('mic ocupado — reintenta', '#F59E0B');
         }
       };
 
