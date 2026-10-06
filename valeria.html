@@ -148,6 +148,9 @@ let escuchando = false;
 let valHablandoFlag = false;
 let ciegoHasta = 0;
 let presentada = false;
+/* Monitor de barge-in: UN solo getUserMedia de por vida (compartido con el SR,
+   sin abrir/cerrar por TTS — así no hay conflicto de mic en Android). */
+let barStream = null, barCtx = null, barAn = null, barTicks = 0, barTimer = null;
 
 /* ---------- utilidades UI ---------- */
 function setDbg(t, c) { dbg.textContent = t; dbg.style.color = c || '#64748b'; }
@@ -191,6 +194,49 @@ function esEcoDeVal(dicho) {
   const tDic = wDicho.join(' ');
   if (tDic.length > 8 && tVal.includes(tDic)) return true;
   return false;
+}
+
+/* ---------- MONITOR DE BARGE-IN (un solo stream, por vida) ---------- */
+async function iniciarMonitor() {
+  if (barStream) return; // ya activo — UNA sola vez
+  try {
+    barStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    barCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const srcNode = barCtx.createMediaStreamSource(barStream);
+    barAn = barCtx.createAnalyser();
+    barAn.fftSize = 512;
+    srcNode.connect(barAn);
+    const buf = new Uint8Array(barAn.frequencyBinCount);
+    barTimer = setInterval(function () {
+      if (!valHablandoFlag) { barTicks = 0; return; } // solo vigila mientras Val habla
+      barAn.getByteFrequencyData(buf);
+      const level = buf.reduce((a, b) => a + b, 0) / buf.length;
+      if (level > 45) {                     // umbral de voz REAL (eco va de 8-35)
+        barTicks++;
+        if (barTicks >= 2) {                // 400ms sostenidos: es humano hablando
+          barTicks = 0;
+          interrumpir();                    // cortar TTS YA
+        }
+      } else {
+        barTicks = Math.max(0, barTicks - 1); // decaimiento suave
+      }
+    }, 200);
+    setDbg('monitor listo', '#64748b');
+  } catch (e) {
+    setDbg('monitor sin mic', '#F59E0B');
+  }
+}
+function interrumpir() {
+  try { speechSynthesis.cancel(); } catch (_) {}
+  if (valHablandoFlag) {
+    valHablandoFlag = false;
+    modo('listening');
+    setDbg('¡interrumpida!', '#38BDF8');
+    ciegoHasta = Date.now() + 500; // el último eco del altavoz muere en la ventana
+    // reenganchar el SR para capturar la nueva solicitud:
+    cerrar();
+    setTimeout(function(){ if (presentada) abrir(); }, 300);
+  }
 }
 
 /* ---------- TTS ---------- */
@@ -358,24 +404,9 @@ function abrir() {
         }
         else interim += r[0].transcript;
       }
-      // ==== BARGE-IN POR VOZ con filtro de eco ====
-      // El mic sigue ABIERTO mientras Val habla (el MISMO SR, sin streams extra).
-      // Si lo transcrito NO es eco de su última frase → es TU voz real → cortarla ya.
-      // El eco del altavoz queda descartado por el detector de texto; si el eco
-      // fuera tan fuerte que no matchea, la ventana ciega tras el corte lo frena.
-      if (valHablandoFlag) {
-        const posibleInterrupcion = (interim + ' ' + acumulado).trim();
-        if (posibleInterrupcion.length > 3 && !esEcoDeVal(posibleInterrupcion)) {
-          // voz REAL del usuario → BARGE-IN: cortar TTS y escuchar
-          try { speechSynthesis.cancel(); } catch (_) {}
-          valHablandoFlag = false;
-          acumulado = ''; // la interrupción se sigue oyendo en los próximos eventos
-          ciegoHasta = Date.now() + 400; // mini pausa para que el TTS muera del altavoz
-          modo('listening');
-          setDbg('interrumpida por voz', '#38BDF8');
-        }
-        return; // nada más se procesa mientras habla
-      }
+      // Durante el TTS el monitor de energía ya corta a Val con voz REAL.
+      // Lo que llegue aquí mientras habla es eco del altavoz → descartar.
+      if (valHablandoFlag) { acumulado = ''; return; }
       if (Date.now() < ciegoHasta) { acumulado = ''; return; } // ventana ciega al (re)iniciar
       const dicho = (interim + ' ' + acumulado).trim();
       // doble protección: si aún es eco de la última frase, descartar
@@ -435,6 +466,7 @@ function cerrar() {
 async function empezar() {
   if (presentada) { abrir(); return; }
   presentada = true;
+  iniciarMonitor(); // UN stream por vida: barge-in por voz + SR comparten
   document.getElementById('titulo').textContent = 'Val — Asistente de Voz de AplicatiBox';
   await hablar('Hola! Soy Val, la asistente de voz de AplicatiBox. Conmigo, tu empresa responde a sus clientes por voz a toda hora: información, precios y reservas. Habla normal, te escucho.');
   modo('idle');
