@@ -198,7 +198,7 @@ async function hablar(texto) {
   valHablandoFlag = true;
   ultimaFraseVal = texto; // registrar para el detector de eco (protección extra)
   modo('speaking');
-  cerrar(); // mic CERRADO mientras Val habla: el eco jamás se procesa
+  // el SR sigue ABIERTO durante el TTS: barge-in por voz (filtro de eco en onresult)
   addMsg(texto, 'bot');
   try {
     const u = new SpeechSynthesisUtterance(texto);
@@ -210,7 +210,9 @@ async function hablar(texto) {
   } catch (_) {}
   valHablandoFlag = false;
   modo('idle');
-  setTimeout(function(){ if (presentada) abrir(); }, 600); // reanudar escucha
+  cerrar(); // limpiar el SR por si quedó a medias durante el TTS
+  ciegoHasta = Date.now() + 800; // el eco del final del TTS muere aquí
+  setTimeout(function(){ if (presentada) abrir(); }, 800); // reanudar limpio
 }
 
 /* ---------- CEREBRO (embebido, sin fetch) ---------- */
@@ -336,20 +338,44 @@ function abrir() {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
         if (r.isFinal) {
-          // DEDUPLICACIÓN: Chrome Android re-entrega el mismo isFinal varias veces
-          // → la frase se acumulaba repetida 4-5 veces. Solo sumar si NO está ya al final.
+          // DEDUP ROBUSTA: Chrome Android re-entrega el mismo isFinal con variaciones
+          // (mayúsculas, puntuación, trozos englobados). Normalizamos y comparamos:
+          const nrm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();
           const trozo = r[0].transcript.trim();
-          if (trozo && !acumulado.trim().endsWith(trozo)) {
-            acumulado += trozo + ' ';
+          const nTrozo = nrm(trozo);
+          const nAcum = nrm(acumulado);
+          if (!nTrozo) continue;
+          // caso 1: el trozo es lo mismo que ya está al final (re-entrega) → ignorar
+          if (nAcum.endsWith(nTrozo)) continue;
+          // caso 2: el trozo CONTIENE todo lo acumulado (re-entrega englobada del
+          // final completo con los interims pegados) → REEMPLAZAR el acumulado
+          if (nTrozo.includes(nAcum) && nAcum.length > 0) {
+            acumulado = trozo + ' ';
+            continue;
           }
+          // caso 3: texto genuinamente nuevo → sumar
+          acumulado += trozo + ' ';
         }
         else interim += r[0].transcript;
       }
-      // ==== ANTI-ECO ABSOLUTO: mientras Val habla NO se procesa NADA del mic ====
-      // El altavoz de Android devuelve la voz de Val al mic (eco) y ningún filtro
-      // de texto es 100% fiable (ruido/fragmentos). Solución sin ambigüedad:
-      // escucha CERRADA durante el TTS. Para interrumpir a Val: toca el círculo.
-      if (valHablandoFlag) { acumulado = ''; return; }
+      // ==== BARGE-IN POR VOZ con filtro de eco ====
+      // El mic sigue ABIERTO mientras Val habla (el MISMO SR, sin streams extra).
+      // Si lo transcrito NO es eco de su última frase → es TU voz real → cortarla ya.
+      // El eco del altavoz queda descartado por el detector de texto; si el eco
+      // fuera tan fuerte que no matchea, la ventana ciega tras el corte lo frena.
+      if (valHablandoFlag) {
+        const posibleInterrupcion = (interim + ' ' + acumulado).trim();
+        if (posibleInterrupcion.length > 3 && !esEcoDeVal(posibleInterrupcion)) {
+          // voz REAL del usuario → BARGE-IN: cortar TTS y escuchar
+          try { speechSynthesis.cancel(); } catch (_) {}
+          valHablandoFlag = false;
+          acumulado = ''; // la interrupción se sigue oyendo en los próximos eventos
+          ciegoHasta = Date.now() + 400; // mini pausa para que el TTS muera del altavoz
+          modo('listening');
+          setDbg('interrumpida por voz', '#38BDF8');
+        }
+        return; // nada más se procesa mientras habla
+      }
       if (Date.now() < ciegoHasta) { acumulado = ''; return; } // ventana ciega al (re)iniciar
       const dicho = (interim + ' ' + acumulado).trim();
       // doble protección: si aún es eco de la última frase, descartar
