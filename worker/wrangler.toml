@@ -1,0 +1,9 @@
+name = "val-asr-tts"
+main = "src/worker.js"
+compatibility_date = "2026-10-01"
+usage_model = "bundled"
+
+[vars]
+# ASR/TTS del Worker (secrets van con: npx wrangler secret put GROQ_API_KEY)
+GROQ_ASR_MODEL = "whisper-large-v3-turbo"
+TTS_MODEL = "whisper-tts" # placeholder; resolved dynamically
