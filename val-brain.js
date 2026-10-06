@@ -41,6 +41,9 @@
   const SALUDO_RX = /^(hola|buenas|buenos dias|buenas tardes|buenas noches|hey|que mas|que tal)/;
   const PRECIO_RX = /(precio|precios|cuanto|cuanto vale|cuanto cuesta|valor|tarifa|tarifas)/;
   const SERVICIOS_RX = /(servicios|tratamientos|que tienen|que hacen|catalogo|menu|opciones)/;
+  const PLANES_RX = /(cuanto (cuesta|vale) (el|la|tu) (asistente|sistema|val|asesora|app|aplicacion)|planes|suscripcion|contratar (el|la|a) (asistente|sistema|val)|precio (del|de el|de la) (asistente|sistema|val)|mensualidad|licencia)/;
+  const QUEHACE_RX = /(que puede hacer|que haces|que servicios ofrece|como funciona|para que sirves|que sabes hacer|funcionalidades|capacidades|como me ayudas)/;
+  const INSTALAR_RX = /(como (instalo|instalo|instal|descargo|obtengo|consigo|adquiero|puedo tener)|instalar|instalacion|descargar|donde (la|lo) (consigo|descargo|encuentro)|gratis|open source|codigo abierto|repositorio|github|quiero una|la quiero|me interesa (una|la)|funciona (para|en) (mi|otro|otros|diferentes)|sirve (para|en) (mi|otro|otros|diferentes)|que (tipos|tipo) de (negocios|empresas|clinicas)|para (que|quienes|que tipo) (sirve|sirven|es))/;
 
   // Estado de agenda en curso
   let agenda = null; // {nombre, servicio, fecha, hora, fase}
@@ -62,6 +65,12 @@
       return flujoAgenda(texto, t);
     }
 
+    // Planes del asistente (§6.3): cuando preguntan por el precio de Val/suscripción
+    if (PLANES_RX.test(t)) {
+      const txt = window.__valPlanesTxt ? window.__valPlanesTxt() : 'Starter 99, Pro 199 y Premium 349 dólares al mes.';
+      return { answer: `Con gusto te cuento. Val es la asistente que atiende tu negocio por voz las 24 horas, y tiene tres planes: ${txt}. El plan Starter es con el que la mayoría empieza. ¿Quieres que un asesor te contacte para activarla en tu negocio?`, action: null, args: {} };
+    }
+
     // Intención de agendar
     if (AGENDAR_RX.test(t)) {
       const s = findServicio(t);
@@ -72,7 +81,7 @@
 
     const s = findServicio(t);
     if (s && PRECIO_RX.test(t)) {
-      return { answer: `El ${s.nombre} tiene un valor de ${fmt(s.precio_cop)} y dura ${s.duracion_min} minutos. ${s.descripcion}. ¿Te gustaría que te lo agende?`, action: null, args: {} };
+      return { answer: `En este catálogo de ejemplo, ${s.nombre} son ${fmt(s.precio_cop)} y dura ${s.duracion_min} minutos. Así es como yo le daría la información de los servicios de TU empresa a tus clientes. ¿Quieres ver cómo agendo una cita, o te cuento cómo tenerme en tu negocio?`, action: null, args: {} };
     }
     if (s) {
       return { answer: `${s.nombre}: ${s.descripcion}. Dura ${s.duracion_min} minutos y su valor es ${fmt(s.precio_cop)}. ¿Quieres que te lo agende?`, action: null, args: {} };
@@ -83,14 +92,28 @@
     }
     if (SERVICIOS_RX.test(t)) {
       const lista = DATA.catalogo.slice(0, 5).map(x => '• ' + x.nombre).join('\n');
-      return { answer: 'Estos son algunos de nuestros servicios:\n' + lista + '\n¿Cuál te interesa?', action: null, args: {} };
+      return { answer: `Tenemos varias opciones: ${lista.replace(/\n• /g, ', ')}. ¿Hay alguno que te llame la atención o te cuento más de alguno en particular?`, action: null, args: {} };
     }
     if (SALUDO_RX.test(t)) {
-      return { answer: `¡Hola! Qué gusto. Soy ${nombreAsesora}, asesora de ${nombreClinica}. Pregúntame por tratamientos, precios o disponibilidad — o si quieres, te agendo tu cita ahora mismo.`, action: null, args: {} };
+      return { answer: '¡Hola! Soy Val, la asistente de voz de AplicatiBox. Conmigo tu empresa atiende a sus clientes por voz las 24 horas: respondo preguntas, doy información y agendo citas. Estás en una demo con un catálogo de ejemplo — pregúntame algo o di agendar para ver cómo trabajo.', action: null, args: {} };
     }
 
-    // §3.4: no sabe la respuesta → derivar
-    return { answer: 'Esa consulta la responde mejor un asesor humano de ' + nombreClinica + '. Te paso el WhatsApp directo para que te respondan con precisión.', action: 'derivar', args: {} };
+    // ¿Qué puede hacer Val? → capacidades del producto para empresas
+    if (QUEHACE_RX.test(t)) {
+      return { answer: 'Conmigo, tu empresa atiende por voz las 24 horas: respondo preguntas de tus clientes, les doy precios e información de tus servicios, agendo citas y las paso a tu WhatsApp. No descansa, no olvida, y atiende a varios clientes a la vez. ¿Quieres ver cómo agendo una demo o prefieres que un asesor te contacte?', action: null, args: {} };
+    }
+
+    // Instalación y multi-negocio: Val es producto de la agencia, instalable en cualquier negocio
+    if (INSTALAR_RX.test(t)) {
+      const tipoNeg = /(clinica|clinicas|estetica|spa|salon|barberia|consultorio|odontolog|medic|gimnasio|tienda|negocio|empresa)/.test(t);
+      if (tipoNeg) {
+        return { answer: '¡Claro! Val funciona para clínicas de estética, spas, salones, consultorios odontológicos, barberías y en general cualquier negocio que atienda clientes y agende citas. La instalamos con la información de TU negocio: tus servicios, tus precios y tu horario. ¿Quieres que un asesor de AplicatiBox te contacte para instalarla en el tuyo?', action: null, args: {} };
+      }
+      return { answer: 'Te cuento: Val es un proyecto abierto y gratuito — el código está disponible para todos. Si la quieres funcionando en tu negocio con tus servicios, tus precios y tu horario, la instalación la hace nuestro equipo de AplicatiBox. ¿Te paso con un asesor para dejarte la tuya lista?', action: null, args: {} };
+    }
+
+    // §3.4 reformulado: no abre WhatsApp directo — pregunta primero qué necesita
+    return { answer: 'Claro que te ayudo. Cuéntame un poquito más: ¿buscas precio de algún tratamiento, quieres agendar una cita o prefieres que te ponga en contacto con la clínica?', action: null, args: {} };
   }
 
   function flujoAgenda(texto, t) {
