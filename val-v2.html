@@ -189,8 +189,8 @@ function addMsg(texto, quien) {
   chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
 }
 /* ---------- TTS: MP3 del Worker (sin speechSynthesis — PRD §4) ---------- */
-let valSpeaking = false; // TRUE desde fetch hasta que termina audio (cubre descarga + reproducción)
-let ttsAbort = null; // AbortController para cancelar fetch TTS si interrumpen
+let valSpeaking = false;
+let ttsAbort = null;
 function interrumpir() {
   valSpeaking = false;
   if (ttsAbort) { try { ttsAbort.abort(); } catch(_){} ttsAbort = null; }
@@ -207,8 +207,13 @@ async function hablar(texto) {
     const blob = await res.blob();
     if (!blob.size) throw new Error('tts vacío');
     valAudio = new Audio(URL.createObjectURL(blob));
-    await new Promise(r => { valAudio.onended = r; valAudio.onerror = r; valAudio.play().catch(r); });
-  } catch (e) { 
+    await new Promise(r => {
+      valAudio.onended = r;
+      valAudio.onerror = r;
+      valAudio.onpause = r; // se resuelve al pausar (interrumpir)
+      valAudio.play().catch(r);
+    });
+  } catch (e) {
     if (e.name !== 'AbortError') { /* anti-eco: sin TTS, solo texto en chat */ }
   }
   valAudio = null;
