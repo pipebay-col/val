@@ -87,7 +87,7 @@ async function tts(request, env) {
     for (let i = 0; i < text.length; i += 200) parts.push(text.slice(i, i + 200));
     const audios = [];
     for (const p of parts) {
-      const u = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=es&ttsspeed=1&q=' + encodeURIComponent(p);
+      const u = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=es&ttsspeed=1.5&q=' + encodeURIComponent(p);
       const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0' } });
       if (!r.ok) return json(request, { error: 'tts_upstream', detail: 'HTTP ' + r.status }, 502);
       audios.push(await r.arrayBuffer());

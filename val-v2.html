@@ -189,8 +189,13 @@ function addMsg(texto, quien) {
   chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
 }
 /* ---------- TTS: MP3 del Worker (sin speechSynthesis — PRD §4) ---------- */
-function interrumpir() { if (valAudio) { try { valAudio.pause(); } catch(_){} valAudio = null; } }
+let valSpeaking = false; // TRUE desde fetch hasta que termina audio (cubre descarga + reproducción)
+function interrumpir() {
+  valSpeaking = false;
+  if (valAudio) { try { valAudio.pause(); } catch(_){} valAudio = null; }
+}
 async function hablar(texto) {
+  valSpeaking = true;
   addMsg(texto, 'bot');
   modo('speaking');
   try {
@@ -202,6 +207,7 @@ async function hablar(texto) {
     await new Promise(r => { valAudio.onended = r; valAudio.onerror = r; valAudio.play().catch(r); });
   } catch (_) { /* anti-eco: sin TTS, solo texto en chat */ }
   valAudio = null;
+  valSpeaking = false;
   modo('idle');
 }
 /* ---------- CEREBRO: texto → respuesta (local, sin LLM) ---------- */
@@ -232,7 +238,7 @@ async function transcribe(blob) {
 }
 /* ---------- PIPELINE ESTABLE: getUserMedia + MediaRecorder + VAD 1.3s (valeria 219cc80) ---------- */
 async function listen() {
-  if (busy || recording || !presentada || micBlocked) return;
+  if (busy || recording || !presentada || micBlocked || valSpeaking) return;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     listenFails = 0;
@@ -290,7 +296,7 @@ async function empezar() {
   listen();
 }
 orb.addEventListener('click', () => {
-  if (valAudio) { interrumpir(); modo('listening'); listen(); return; } // barge-in táctil (L6)
+  if (valSpeaking) { interrumpir(); modo('listening'); listen(); return; } // barge-in táctil en CUALQUIER fase del TTS
   if (!presentada) empezar(); else listen();
 });
 document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
