@@ -190,23 +190,29 @@ function addMsg(texto, quien) {
 }
 /* ---------- TTS: MP3 del Worker (sin speechSynthesis — PRD §4) ---------- */
 let valSpeaking = false; // TRUE desde fetch hasta que termina audio (cubre descarga + reproducción)
+let ttsAbort = null; // AbortController para cancelar fetch TTS si interrumpen
 function interrumpir() {
   valSpeaking = false;
+  if (ttsAbort) { try { ttsAbort.abort(); } catch(_){} ttsAbort = null; }
   if (valAudio) { try { valAudio.pause(); } catch(_){} valAudio = null; }
 }
 async function hablar(texto) {
   valSpeaking = true;
+  ttsAbort = new AbortController();
   addMsg(texto, 'bot');
   modo('speaking');
   try {
-    const res = await fetch(WORKER + '/api/tts', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: texto }) });
+    const res = await fetch(WORKER + '/api/tts', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: texto }), signal: ttsAbort.signal });
     if (!res.ok) throw new Error('tts ' + res.status);
     const blob = await res.blob();
     if (!blob.size) throw new Error('tts vacío');
     valAudio = new Audio(URL.createObjectURL(blob));
     await new Promise(r => { valAudio.onended = r; valAudio.onerror = r; valAudio.play().catch(r); });
-  } catch (_) { /* anti-eco: sin TTS, solo texto en chat */ }
+  } catch (e) { 
+    if (e.name !== 'AbortError') { /* anti-eco: sin TTS, solo texto en chat */ }
+  }
   valAudio = null;
+  ttsAbort = null;
   valSpeaking = false;
   modo('idle');
 }
